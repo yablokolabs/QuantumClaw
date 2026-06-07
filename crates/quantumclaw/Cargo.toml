@@ -1,22 +1,15 @@
 [package]
 name = "quantumclaw"
 version = "0.1.0"
-description = "Umbrella crate for the QuantumClaw agent runtime built on ZeroClaw."
+description = "Single-crate public API for the QuantumClaw agent runtime built on ZeroClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 readme = "README.md"
 
 [dependencies]
-quantumclaw-core = { workspace = true }
-quantumclaw-runtime = { workspace = true }
-quantumclaw-memory = { workspace = true }
-quantumclaw-planner = { workspace = true }
-quantumclaw-ir = { workspace = true }
-quantumclaw-solvers-classical = { workspace = true }
-quantumclaw-solvers-qinspired = { workspace = true }
-quantumclaw-solvers-future-qpu = { workspace = true }
-quantumclaw-tools = { workspace = true }
-quantumclaw-policy = { workspace = true }
-quantumclaw-skills = { workspace = true }
-quantumclaw-observability = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+zeroclaw = { workspace = true }

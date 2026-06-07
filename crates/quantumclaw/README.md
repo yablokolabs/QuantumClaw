@@ -1,8 +1,8 @@
 # quantumclaw
 
-Umbrella crate for the QuantumClaw Rust workspace.
+Single public crate for the QuantumClaw Rust workspace.
 
-QuantumClaw is a ZeroClaw-backed agent runtime with backend-neutral planning traits, classical solvers, quantum-inspired solver scaffolds, and optional future QPU adapter boundaries.
+QuantumClaw is a ZeroClaw-backed agent runtime with backend-neutral planning traits, memory, policy, tools, skills, observability, and runtime orchestration.
 
 ## Usage
 
@@ -12,23 +12,24 @@ quantumclaw = "0.1.0"
 ```
 
 ```rust
-use quantumclaw::prelude::*;
+use quantumclaw::{AgentTask, SolverContext};
 
-let task = core::AgentTask::new("Plan a safe coding refactor");
-let context = core::SolverContext::from_task(&task);
+let task = AgentTask::new("Plan a safe coding refactor");
+let context = SolverContext::from_task(&task);
 ```
 
-## Re-exported modules
+## Public API
 
-- `core` — shared traits and runtime types
-- `ir` — backend-neutral decision IR
-- `planner` — planner modes and requests
-- `memory` — memory abstractions
-- `runtime` — ZeroClaw-backed runtime orchestration
-- `tools` — tool registry and call abstractions
-- `policy` — deterministic policy and audit controls
-- `skills` — procedural skills and recipes
-- `observability` — traces, metrics, and telemetry
-- `solvers_classical` — classical solver backends
-- `solvers_qinspired` — quantum-inspired solver scaffolds
-- `solvers_future_qpu` — future QPU adapter scaffolds
+`quantumclaw` is the only crates.io-publishable package. Internal workspace crates are private (`publish = false`) and their public APIs are re-exported from this crate root.
+
+Re-exported component APIs:
+
+- `quantumclaw_core`
+- `quantumclaw_runtime`
+- `quantumclaw_memory`
+- `quantumclaw_planner`
+- `quantumclaw_ir`
+- `quantumclaw_tools`
+- `quantumclaw_policy`
+- `quantumclaw_skills`
+- `quantumclaw_observability`

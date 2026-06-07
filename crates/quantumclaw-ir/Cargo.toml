@@ -5,6 +5,7 @@ description = "Backend-neutral decision IR for QuantumClaw planning and solver b
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

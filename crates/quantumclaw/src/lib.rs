@@ -1,28 +1,30 @@
-//! Umbrella crate for QuantumClaw.
+//! Single public crate for QuantumClaw.
 //!
-//! QuantumClaw is a ZeroClaw-backed agent runtime with backend-neutral planning
-//! traits, classical solvers, quantum-inspired solver scaffolds, and optional
-//! future QPU adapter boundaries. This crate re-exports the workspace crates so
-//! consumers can depend on a single `quantumclaw` package and opt into modules as
-//! the runtime evolves.
+//! Consumers should depend on this `quantumclaw` package only. The workspace
+//! component crates remain private implementation crates; their public APIs are
+//! mirrored inside this package and re-exported from the crate root.
 
-pub use quantumclaw_core as core;
-pub use quantumclaw_ir as ir;
-pub use quantumclaw_memory as memory;
-pub use quantumclaw_observability as observability;
-pub use quantumclaw_planner as planner;
-pub use quantumclaw_policy as policy;
-pub use quantumclaw_runtime as runtime;
-pub use quantumclaw_skills as skills;
-pub use quantumclaw_solvers_classical as solvers_classical;
-pub use quantumclaw_solvers_future_qpu as solvers_future_qpu;
-pub use quantumclaw_solvers_qinspired as solvers_qinspired;
-pub use quantumclaw_tools as tools;
+// The component APIs intentionally expose some overlapping domain names
+// (for example telemetry types). Keep the requested single-crate glob surface
+// without making ambiguous re-export warnings fail CI.
+#![allow(ambiguous_glob_reexports)]
 
-/// Common imports for building QuantumClaw runtimes and planners.
-pub mod prelude {
-    pub use crate::{
-        core, ir, memory, observability, planner, policy, runtime, skills, solvers_classical,
-        solvers_future_qpu, solvers_qinspired, tools,
-    };
-}
+pub mod quantumclaw_core;
+pub mod quantumclaw_ir;
+pub mod quantumclaw_memory;
+pub mod quantumclaw_observability;
+pub mod quantumclaw_planner;
+pub mod quantumclaw_policy;
+pub mod quantumclaw_runtime;
+pub mod quantumclaw_skills;
+pub mod quantumclaw_tools;
+
+pub use quantumclaw_core::*;
+pub use quantumclaw_ir::*;
+pub use quantumclaw_memory::*;
+pub use quantumclaw_observability::*;
+pub use quantumclaw_planner::*;
+pub use quantumclaw_policy::*;
+pub use quantumclaw_runtime::*;
+pub use quantumclaw_skills::*;
+pub use quantumclaw_tools::*;

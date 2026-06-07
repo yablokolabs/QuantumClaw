@@ -5,6 +5,7 @@ description = "Procedural skills and recipe abstractions for QuantumClaw agents.
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

@@ -5,6 +5,7 @@ description = "Future QPU adapter scaffolds for optional QuantumClaw solver back
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [features]
 default = []

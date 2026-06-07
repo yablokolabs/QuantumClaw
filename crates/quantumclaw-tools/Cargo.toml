@@ -5,6 +5,7 @@ description = "Policy-controlled tool registry and tool call abstractions for Qu
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 anyhow = { workspace = true }

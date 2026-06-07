@@ -5,6 +5,7 @@ description = "Quantum-inspired solver scaffolds for QuantumClaw decision proble
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

@@ -5,6 +5,7 @@ description = "Planner modes, requests, responses, and solver selection for Quan
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

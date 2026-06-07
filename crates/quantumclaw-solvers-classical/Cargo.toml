@@ -5,6 +5,7 @@ description = "Classical solver backends for QuantumClaw decision problems."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

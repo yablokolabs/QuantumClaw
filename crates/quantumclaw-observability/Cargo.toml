@@ -5,6 +5,7 @@ description = "Trace, metric, telemetry, and audit abstractions for QuantumClaw.
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

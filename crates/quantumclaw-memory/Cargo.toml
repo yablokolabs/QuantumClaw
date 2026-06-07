@@ -5,6 +5,7 @@ description = "Memory abstractions for QuantumClaw agents and planning workflows
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

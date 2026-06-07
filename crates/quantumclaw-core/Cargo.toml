@@ -5,6 +5,7 @@ description = "Core traits and shared types for QuantumClaw agent runtime compon
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 serde = { workspace = true }

@@ -5,6 +5,7 @@ description = "ZeroClaw-backed runtime orchestration for QuantumClaw agents."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+publish = false
 
 [dependencies]
 anyhow = { workspace = true }
