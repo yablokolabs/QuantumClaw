@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# pyright: reportUndefinedVariable=false
+# pyright: reportUndefinedVariable=false, reportInvalidTypeForm=false
 """CUDA-Q sidecar spike for QuantumClaw QUBO-like planning problems.
 
 The script accepts the same minimal shape emitted by the current
@@ -27,6 +27,16 @@ import math
 import random
 from pathlib import Path
 from typing import Any, Iterable
+
+try:
+    import cudaq as _cudaq  # type: ignore[import-not-found]
+    from cudaq import spin as _cudaq_spin  # type: ignore[import-not-found]
+except ImportError as exc:
+    _cudaq = None
+    _cudaq_spin = None
+    _cudaq_import_error: str | None = str(exc)
+else:
+    _cudaq_import_error = None
 
 
 def load_problem(path: Path) -> dict[str, Any]:
@@ -131,9 +141,36 @@ def qubo_to_ising_for_minimized_negative_objective(
     return fields, edges_src, edges_tgt, couplings
 
 
+def cudaq_import_report() -> dict[str, Any]:
+    """Return a machine-readable CUDA-Q import/status probe."""
+
+    if _cudaq is None:
+        return {
+            "cudaq_available": False,
+            "reason": f"CUDA-Q unavailable: {_cudaq_import_error}",
+        }
+
+    report: dict[str, Any] = {
+        "cudaq_available": True,
+        "cudaq_version": getattr(_cudaq, "__version__", "unknown"),
+    }
+    try:
+        report["available_gpus"] = _cudaq.num_available_gpus()
+    except Exception as exc:
+        report["available_gpus_error"] = f"{type(exc).__name__}: {exc}"
+    try:
+        report["has_nvidia_target"] = _cudaq.has_target("nvidia")
+    except Exception as exc:
+        report["has_nvidia_target_error"] = f"{type(exc).__name__}: {exc}"
+    return report
+
+
 def run_cudaq_qaoa(problem: dict[str, Any]) -> dict[str, Any]:
-    import cudaq  # type: ignore[import-not-found]
-    from cudaq import spin  # type: ignore[import-not-found]
+    if _cudaq is None or _cudaq_spin is None:
+        raise ModuleNotFoundError(_cudaq_import_error or "No module named 'cudaq'")
+
+    cudaq = _cudaq
+    spin = _cudaq_spin
     from typing import List
 
     try:
@@ -252,18 +289,22 @@ def run_cudaq_qaoa(problem: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def solve(problem: dict[str, Any]) -> dict[str, Any]:
+def solve(problem: dict[str, Any], *, require_cudaq: bool = False) -> dict[str, Any]:
     try:
         result = run_cudaq_qaoa(problem)
         mode = "cudaq"
         cudaq_available = True
         reason = None
     except ModuleNotFoundError as exc:
+        if require_cudaq:
+            raise
         result = brute_force_or_greedy(problem)
         mode = "classical-fallback"
         cudaq_available = False
         reason = f"CUDA-Q unavailable: {exc}"
     except Exception as exc:
+        if require_cudaq:
+            raise
         result = brute_force_or_greedy(problem)
         mode = "classical-fallback"
         cudaq_available = False
@@ -289,10 +330,41 @@ def main() -> None:
         default=Path(__file__).with_name("sample_problem.json"),
         help="Path to a QUBO-like QuantumClaw problem JSON file.",
     )
+    parser.add_argument(
+        "--check-cudaq-import",
+        action="store_true",
+        help="Probe `import cudaq` and print CUDA-Q availability without solving.",
+    )
+    parser.add_argument(
+        "--require-cudaq",
+        action="store_true",
+        help="Fail instead of using the classical fallback when CUDA-Q is unavailable.",
+    )
     args = parser.parse_args()
 
+    if args.check_cudaq_import:
+        report = cudaq_import_report()
+        print(json.dumps(report, indent=2, sort_keys=True))
+        if args.require_cudaq and not report["cudaq_available"]:
+            raise SystemExit(1)
+        return
+
     problem = load_problem(args.problem)
-    print(json.dumps(solve(problem), indent=2, sort_keys=True))
+    try:
+        print(json.dumps(solve(problem, require_cudaq=args.require_cudaq), indent=2, sort_keys=True))
+    except Exception as exc:
+        print(
+            json.dumps(
+                {
+                    "cudaq_available": False,
+                    "mode": "cudaq-required",
+                    "reason": f"CUDA-Q execution failed: {type(exc).__name__}: {exc}",
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        raise SystemExit(1) from exc
 
 
 if __name__ == "__main__":

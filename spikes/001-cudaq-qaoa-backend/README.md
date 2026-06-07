@@ -37,11 +37,31 @@ NVIDIA GPU simulators, multi-GPU modes, and hardware provider backends.
 From the repository root:
 
 ```sh
+# Syntax-only check. This does not import or execute CUDA-Q.
 python3 -m py_compile spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py
+
+# Explicit CUDA-Q import probe. This is the command that proves whether
+# `import cudaq` works on the current host.
+python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --check-cudaq-import
+
+# Run the sidecar. It uses CUDA-Q only when the import probe succeeds; otherwise
+# it returns a classical fallback result to keep the contract runnable in CI.
 python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py
+
+# Force real CUDA-Q mode and fail instead of falling back.
+python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --require-cudaq
 ```
 
-Current local result on this VM:
+Current explicit CUDA-Q import probe on this VM:
+
+```json
+{
+  "cudaq_available": false,
+  "reason": "CUDA-Q unavailable: No module named 'cudaq'"
+}
+```
+
+Current fallback run on this VM:
 
 ```json
 {
@@ -69,7 +89,7 @@ Current local result on this VM:
 
 Environment finding: this VM currently has no visible NVIDIA GPU via
 `nvidia-smi`, and Python `cudaq` is not installed. That means this spike validates
-the sidecar contract locally, not CUDA-Q performance.
+the sidecar contract locally, not CUDA-Q execution or CUDA-Q performance.
 
 ## Integration shape if validated
 
