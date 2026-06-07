@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-solvers-qinspired"
 version = "0.1.0"
+description = "Quantum-inspired solver scaffolds for QuantumClaw decision problems."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

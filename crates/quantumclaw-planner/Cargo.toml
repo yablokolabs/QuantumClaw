@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-planner"
 version = "0.1.0"
+description = "Planner modes, requests, responses, and solver selection for QuantumClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

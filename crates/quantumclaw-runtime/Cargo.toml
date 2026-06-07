@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-runtime"
 version = "0.1.0"
+description = "ZeroClaw-backed runtime orchestration for QuantumClaw agents."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

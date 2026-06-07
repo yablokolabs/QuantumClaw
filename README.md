@@ -29,6 +29,7 @@ Expected result includes `zeroclaw v0.1.7` feeding `quantumclaw-runtime`, `quant
 
 ## Workspace layout
 
+- `quantumclaw`: umbrella crate re-exporting the workspace packages for consumers who want one dependency
 - `quantumclaw-core`: shared platform traits and common runtime types
 - `quantumclaw-runtime`: ZeroClaw-native runtime base, sessions, channels, routing, orchestration loop, adapters, subagents, policy/tool/planner/memory integration
 - `quantumclaw-memory`: working, short-term, episodic, semantic, and procedural memory abstractions

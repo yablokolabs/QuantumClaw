@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-policy"
 version = "0.1.0"
+description = "Deterministic policy, permissions, and audit controls for QuantumClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-observability"
 version = "0.1.0"
+description = "Trace, metric, telemetry, and audit abstractions for QuantumClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

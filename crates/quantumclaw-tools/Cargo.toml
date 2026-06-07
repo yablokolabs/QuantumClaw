@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-tools"
 version = "0.1.0"
+description = "Policy-controlled tool registry and tool call abstractions for QuantumClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-solvers-future-qpu"
 version = "0.1.0"
+description = "Future QPU adapter scaffolds for optional QuantumClaw solver backends."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

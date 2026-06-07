@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-ir"
 version = "0.1.0"
+description = "Backend-neutral decision IR for QuantumClaw planning and solver backends."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true

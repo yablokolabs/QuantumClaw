@@ -1,15 +1,13 @@
 [package]
-name = "quantumclaw-app"
+name = "quantumclaw"
 version = "0.1.0"
-description = "Runnable QuantumClaw example application wiring runtime, planners, tools, and policies."
+description = "Umbrella crate for the QuantumClaw agent runtime built on ZeroClaw."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+readme = "README.md"
 
 [dependencies]
-serde = { workspace = true }
-async-trait = { workspace = true }
-serde_json = { workspace = true }
 quantumclaw-core = { workspace = true }
 quantumclaw-runtime = { workspace = true }
 quantumclaw-memory = { workspace = true }
@@ -22,5 +20,3 @@ quantumclaw-tools = { workspace = true }
 quantumclaw-policy = { workspace = true }
 quantumclaw-skills = { workspace = true }
 quantumclaw-observability = { workspace = true }
-tokio = { workspace = true }
-zeroclaw = { workspace = true }

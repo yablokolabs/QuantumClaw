@@ -1,6 +1,7 @@
 [package]
 name = "quantumclaw-core"
 version = "0.1.0"
+description = "Core traits and shared types for QuantumClaw agent runtime components."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
