@@ -40,44 +40,60 @@ From the repository root:
 # Syntax-only check. This does not import or execute CUDA-Q.
 python3 -m py_compile spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py
 
+# Optional isolated CUDA-Q environment used for the validated run below.
+uv venv .venv-cudaq-spike --python 3.11
+uv pip install --python .venv-cudaq-spike/bin/python \
+  cudaq==0.14.2 cuda-quantum-cu13==0.14.2
+. .venv-cudaq-spike/bin/activate
+
 # Explicit CUDA-Q import probe. This is the command that proves whether
 # `import cudaq` works on the current host.
-python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --check-cudaq-import
+python spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --check-cudaq-import
 
 # Run the sidecar. It uses CUDA-Q only when the import probe succeeds; otherwise
 # it returns a classical fallback result to keep the contract runnable in CI.
-python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py
+python spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py
 
 # Force real CUDA-Q mode and fail instead of falling back.
-python3 spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --require-cudaq
+python spikes/001-cudaq-qaoa-backend/cudaq_qaoa_spike.py --require-cudaq
 ```
 
-Current explicit CUDA-Q import probe on this VM:
+Current explicit CUDA-Q import probe on this VM, using `.venv-cudaq-spike`:
 
 ```json
 {
-  "cudaq_available": false,
-  "reason": "CUDA-Q unavailable: No module named 'cudaq'"
+  "available_gpus": 0,
+  "cudaq_available": true,
+  "cudaq_version": "CUDA-Q Version 0.14.2 (https://github.com/NVIDIA/cuda-quantum 91ab3092e76dab8887d1fdf0c99a2478ca90581c)",
+  "has_nvidia_target": true
 }
 ```
 
-Current fallback run on this VM:
+Current forced CUDA-Q run on this VM, using the CPU simulator target:
 
 ```json
 {
   "best_bitstring": "1111",
   "best_score": 3.17,
-  "candidate_count": 16,
-  "cudaq_available": false,
-  "mode": "classical-fallback",
-  "reason": "CUDA-Q unavailable: No module named 'cudaq'",
+  "cudaq_available": true,
+  "layers": 1,
+  "mode": "cudaq",
+  "optimal_expectation": -1.4899427685878228,
+  "optimal_parameters": [
+    -1.946868877633383,
+    0.7848870715048143
+  ],
+  "reason": null,
+  "sample_count": 7,
   "selected_actions": [
     "inspect",
     "test-first",
     "small-edit",
     "validate"
   ],
-  "solver": "classical-bruteforce",
+  "shots": 512,
+  "solver": "cudaq-qaoa",
+  "target": "qpp-cpu",
   "variables": [
     "inspect",
     "test-first",
@@ -88,8 +104,9 @@ Current fallback run on this VM:
 ```
 
 Environment finding: this VM currently has no visible NVIDIA GPU via
-`nvidia-smi`, and Python `cudaq` is not installed. That means this spike validates
-the sidecar contract locally, not CUDA-Q execution or CUDA-Q performance.
+`nvidia-smi`, but CUDA-Q is installed and importable in `.venv-cudaq-spike`.
+This validates CUDA-Q execution on the `qpp-cpu` simulator target, not CUDA-Q GPU
+or QPU performance.
 
 ## Integration shape if validated
 
@@ -115,24 +132,25 @@ the sidecar contract locally, not CUDA-Q execution or CUDA-Q performance.
 - Deterministic policy still has to gate the decoded plan; solver output must not
   bypass QuantumClaw policy.
 
-## Verdict: PARTIAL
+## Verdict: VALIDATED
 
 ### What worked
 
 - A concrete sidecar contract exists and runs from the repo.
 - The sample QUBO-like planning payload is validated.
-- The fallback path returns a solver-shaped result suitable for adapter testing.
-- The CUDA-Q path is isolated behind optional runtime import instead of becoming
-  a hard dependency.
+- CUDA-Q `0.14.2` is installed and importable in an isolated `.venv-cudaq-spike` environment.
+- Forced real CUDA-Q mode runs successfully on the `qpp-cpu` simulator target and returns a solver-shaped result.
+- The fallback path remains available for CI and normal dev hosts where CUDA-Q is absent.
+- The CUDA-Q path is isolated behind optional runtime import instead of becoming a hard dependency.
 
 ### What did not work locally
 
-- CUDA-Q itself was not executed because `cudaq` is not installed on this VM.
-- No NVIDIA GPU is visible locally.
+- No NVIDIA GPU is visible locally, so the `nvidia` target was not exercised despite being available in this CUDA-Q build.
+- GPU/QPU acceleration and performance claims remain unvalidated.
 
 ### Recommendation for the real build
 
-Do not add CUDA-Q as a core dependency yet. Keep it as an optional spike/backend
-lane. Next validation should run this sidecar inside a CUDA-Q-ready environment
-using `qpp-cpu` first, then `nvidia` GPU target, and compare latency/quality under
+Do not add CUDA-Q as a core dependency yet. Keep it as an optional backend lane
+behind the Rust `SolverBackend` boundary. The next validation should run the same
+sidecar on an NVIDIA GPU target and compare latency/quality under
 `ShadowCompare` before promoting it into a production Rust crate.
