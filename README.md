@@ -27,10 +27,21 @@ cargo tree -i zeroclaw
 
 Expected result includes `zeroclaw v0.1.7` feeding `quantumclaw-runtime`, `quantumclaw-tools`, and `quantumclaw-app`.
 
+## Distribution model
+
+QuantumClaw is distributed on crates.io as a **single public crate**:
+
+```toml
+[dependencies]
+quantumclaw = "0.1.0"
+```
+
+All implementation components remain internal workspace crates with `publish = false`. They are hidden from crates.io so consumers have one public dependency surface: `quantumclaw`. The publishable crate mirrors and re-exports the internal component APIs from its crate root.
+
 ## Workspace layout
 
-- `quantumclaw`: umbrella crate re-exporting the workspace packages for consumers who want one dependency
-- `quantumclaw-core`: shared platform traits and common runtime types
+- `quantumclaw`: only publishable public crate; single-crate distribution surface for consumers
+- `quantumclaw-core`: private implementation crate (`publish = false`) with shared platform traits and common runtime types
 - `quantumclaw-runtime`: ZeroClaw-native runtime base, sessions, channels, routing, orchestration loop, adapters, subagents, policy/tool/planner/memory integration
 - `quantumclaw-memory`: working, short-term, episodic, semantic, and procedural memory abstractions
 - `quantumclaw-planner`: planner modes, request/response models, backend selection, explainable plans, shadow comparison
