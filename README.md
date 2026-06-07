@@ -222,7 +222,157 @@ Run tests:
 cargo test
 ```
 
-## Usage examples
+## Practical usage examples
+
+QuantumClaw is meant to be embedded into agent applications as the planning,
+policy, memory, and solver layer. The runnable examples below show concrete ways
+to use the runtime instead of only showing API fragments.
+
+### 1. Safe code-refactor agent
+
+Use this pattern when you want an engineering agent to plan a code change before
+it touches files or runs tools.
+
+```sh
+cargo run -p quantumclaw-app --example safe_code_refactor
+```
+
+What it demonstrates:
+
+- Seeds procedural memory with a known safe Rust-refactor recipe.
+- Builds a runtime with classical and quantum-inspired solver backends.
+- Plans a refactor task through `QuantumClawRuntime::handle_user_task`.
+- Runs deterministic policy before simulated execution.
+- Captures the successful run as a learned skill.
+
+Expected output shape:
+
+```text
+task: Refactor the memory ranking module without changing public behavior, then validate it.
+selected backend: quantum-inspired-hybrid
+policy allowed: true
+retrieved procedures: 1
+plan steps:
+  1. [low] Run validation suite via shell
+  2. [low] Add characterization tests via shell
+  3. [low] Apply focused code edit via code_edit
+  4. [low] Inspect target module via filesystem
+learned skill: skill-refactor-the-memory-ranking-module-without-chang
+```
+
+A real agent would replace the stub tools with concrete file, shell, browser, or
+API tools while keeping the same planner/policy/memory flow.
+
+### 2. Incident triage with ShadowCompare
+
+Use this pattern when you want to benchmark whether the classical or
+quantum-inspired planner is better for a workflow before committing to one.
+
+```sh
+cargo run -p quantumclaw-app --example incident_triage_shadow_compare
+```
+
+What it demonstrates:
+
+- Models a production-deploy triage task as a generic workflow.
+- Runs `PlannerMode::ShadowCompare`.
+- Prefers the quantum-inspired backend as primary.
+- Executes the classical backend as a shadow planner for comparison telemetry.
+- Prints the selected plan and utility/confidence scores.
+
+Expected output shape:
+
+```text
+primary backend: quantum-inspired-hybrid
+utility: 0.93
+confidence: 0.90
+shadow backend: greedy-classical
+primary utility 0.93 vs shadow utility 0.92
+triage plan:
+  1. Collect failing checks and customer-impact signals (search)
+  2. Compare current deploy against last known-good release (filesystem)
+  3. Choose rollback or fix-forward path (external-api)
+  4. Validate recovery gates before closing incident (shell)
+```
+
+This is useful for CI/CD agents, incident-response copilots, operations bots,
+and any workflow where you want backend evaluation without changing runtime
+code.
+
+### 3. Release guardrail / policy gate
+
+Use this pattern when an agent proposes a plan but you need a deterministic
+safety gate before any tool execution.
+
+```sh
+cargo run -p quantumclaw-app --example release_guardrail
+```
+
+What it demonstrates:
+
+- Builds a release-cutover plan with medium, high, and critical-risk steps.
+- Evaluates the plan with `DeterministicPolicyEngine`.
+- Rejects critical-risk actions before execution.
+- Produces an audit event that can be stored or shown to a human reviewer.
+
+Expected output shape:
+
+```text
+allowed: false
+risk: critical
+requires confirmation: false
+reason: critical risk plan rejected by deterministic policy
+audit events: 1
+```
+
+This pattern is appropriate for deployment agents, data-migration agents,
+automated code-modification agents, and enterprise assistants that need hard
+policy boundaries.
+
+### 4. Embedded runtime pattern
+
+The examples use the same embedding pattern:
+
+```rust
+let runtime = QuantumClawRuntime::new(
+    vec![
+        Arc::new(GreedySolver) as Arc<dyn SolverBackend>,
+        Arc::new(QuantumInspiredSolver::default()),
+    ],
+    procedural_memory,
+    InMemoryToolRegistry::with_default_tools(),
+    DeterministicPolicyEngine::default(),
+    InMemoryObserver::default(),
+);
+
+let report = runtime
+    .handle_user_task("Plan and validate a risky autonomous task")
+    .await?;
+```
+
+From there, your application can inspect:
+
+- `report.retrieved_procedures` for memory hits.
+- `report.plan` for selected backend, steps, risk, score, and rationale.
+- `report.policy_decision` for allow/deny/confirmation state.
+- `report.execution` for resolved tool calls and simulated results.
+- `report.telemetry` for traces and backend comparisons.
+- `report.learned_skill` for procedural learning.
+
+### 5. Practical applications
+
+QuantumClaw can be used as the core planner/runtime layer for:
+
+- Coding agents that must plan, validate, and learn safe refactor procedures.
+- CI/CD agents that triage failures and choose rollback vs. fix-forward plans.
+- Research agents that decompose ambiguous requests into ranked actions.
+- Enterprise assistants that need policy checks before calling tools or APIs.
+- Multi-agent orchestrators that compare planning strategies before dispatching
+  work.
+- Future QPU-backed planners where the solver backend changes but the runtime,
+  IR, memory, tools, and policy layers stay stable.
+
+## API usage snippets
 
 ### Run the end-to-end demo
 
