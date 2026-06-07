@@ -176,7 +176,7 @@ impl ProceduralMemory for InMemoryProceduralMemory {
             .cloned()
             .map(|record| (procedure_score(&record, query), record))
             .collect::<Vec<_>>();
-        scored.sort_by(|a, b| b.0.cmp(&a.0));
+        scored.sort_by_key(|entry| std::cmp::Reverse(entry.0));
         Ok(scored
             .into_iter()
             .filter(|(score, _)| *score > 0)
@@ -232,7 +232,7 @@ fn rank_records(records: &[MemoryRecord], query: &str, limit: usize) -> Vec<Memo
             (score, record)
         })
         .collect::<Vec<_>>();
-    scored.sort_by(|a, b| b.0.cmp(&a.0));
+    scored.sort_by_key(|entry| std::cmp::Reverse(entry.0));
     scored
         .into_iter()
         .filter(|(score, _)| *score > 0)
