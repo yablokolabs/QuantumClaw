@@ -1,0 +1,44 @@
+%%{init: {"theme": "dark", "themeVariables": {"background": "#0f172a", "primaryColor": "#1e293b", "primaryTextColor": "#f8fafc", "primaryBorderColor": "#38bdf8", "lineColor": "#94a3b8", "secondaryColor": "#312e81", "tertiaryColor": "#064e3b"}}}%%
+flowchart TD
+    User[User / Channel] --> Runtime[QuantumClaw Runtime Layer]
+    ZeroClaw[ZeroClaw crate\nruntime + config + tools + memory contracts] --> Runtime
+    ZeroClaw --> Tools[ZeroClaw Tool Substrate]
+    ZeroClaw --> Memory[ZeroClaw Memory Contract]
+    ZeroClaw --> Native[NativeRuntime Adapter]
+    Runtime --> Native
+    Runtime --> Router[Message Router]
+    Runtime --> Providers[Provider Integration]
+    Runtime --> Tools
+    Runtime --> Memory
+    Runtime --> Observer[Observability]
+    Runtime --> Cognitive[QuantumClaw Cognitive Layer]
+
+    Cognitive --> Skills[Learned Procedures / Skills]
+    Cognitive --> Planner[Planner]
+    Cognitive --> Subagents[Subagent Orchestration]
+    Planner --> Encoder[ProblemEncoder]
+    Encoder --> IR[Backend-Neutral DecisionProblem IR]
+    IR --> Classical[Classical SolverBackend]
+    IR --> QInspired[Quantum-Inspired SolverBackend]
+    IR --> FutureQPU[Future QPU Adapter]
+    Classical --> Decoder[PlanDecoder]
+    QInspired --> Decoder
+    FutureQPU --> Decoder
+    Decoder --> Policy[Deterministic Policy Engine]
+    Policy --> Execution[Execution Pipeline]
+    Execution --> Audit[Audit + Rollback]
+    Execution --> Skills
+
+    classDef entry fill:#172554,stroke:#60a5fa,color:#f8fafc
+    classDef runtime fill:#064e3b,stroke:#34d399,color:#f8fafc
+    classDef cognitive fill:#581c87,stroke:#c084fc,color:#f8fafc
+    classDef solver fill:#713f12,stroke:#facc15,color:#f8fafc
+    classDef policy fill:#7f1d1d,stroke:#f87171,color:#f8fafc
+    classDef support fill:#1e293b,stroke:#94a3b8,color:#f8fafc
+
+    class User entry
+    class Runtime,Router,Providers,Tools,Memory,Observer,Native runtime
+    class ZeroClaw support
+    class Cognitive,Skills,Planner,Subagents,Encoder,IR cognitive
+    class Classical,QInspired,FutureQPU,Decoder solver
+    class Policy,Execution,Audit policy

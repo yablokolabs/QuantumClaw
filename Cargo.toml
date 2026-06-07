@@ -19,13 +19,15 @@ resolver = "2"
 [workspace.package]
 edition = "2021"
 license = "MIT"
-repository = "https://example.invalid/yablokolabs/QuantumClaw"
+repository = "https://github.com/yablokolabs/QuantumClaw"
 
 [workspace.dependencies]
+anyhow = "1"
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+zeroclaw = { version = "0.1.7", default-features = false }
 
 quantumclaw-core = { path = "crates/quantumclaw-core" }
 quantumclaw-runtime = { path = "crates/quantumclaw-runtime" }

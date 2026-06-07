@@ -14,7 +14,221 @@ use quantumclaw_skills::{Skill, SkillExecutionRecord, SkillLearningPipeline};
 use quantumclaw_tools::InMemoryToolRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
+use zeroclaw::memory::{
+    Memory as ZeroClawMemory, MemoryCategory as ZeroClawMemoryCategory,
+    MemoryEntry as ZeroClawMemoryEntry,
+};
+use zeroclaw::runtime::{
+    NativeRuntime as ZeroClawNativeRuntime, RuntimeAdapter as ZeroClawRuntimeAdapter,
+};
+use zeroclaw::Config as ZeroClawConfig;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ZeroClawExecutionContext {
+    pub runtime_name: String,
+    pub has_shell_access: bool,
+    pub has_filesystem_access: bool,
+    pub supports_long_running: bool,
+    pub storage_path: PathBuf,
+    pub tool_substrate: String,
+    pub memory_backend: String,
+}
+
+#[derive(Clone)]
+pub struct ZeroClawBase {
+    config: Arc<ZeroClawConfig>,
+    runtime: Arc<dyn ZeroClawRuntimeAdapter>,
+    memory: Arc<dyn ZeroClawMemory>,
+    tool_substrate: &'static str,
+}
+
+impl ZeroClawBase {
+    pub fn native(memory: InMemoryProceduralMemory) -> Self {
+        Self {
+            config: Arc::new(ZeroClawConfig::default()),
+            runtime: Arc::new(ZeroClawNativeRuntime::new()),
+            memory: Arc::new(ZeroClawProceduralMemory::new(memory)),
+            tool_substrate: "zeroclaw::tools::Tool",
+        }
+    }
+
+    pub fn config(&self) -> Arc<ZeroClawConfig> {
+        self.config.clone()
+    }
+
+    pub fn runtime_adapter(&self) -> &dyn ZeroClawRuntimeAdapter {
+        self.runtime.as_ref()
+    }
+
+    pub fn memory(&self) -> Arc<dyn ZeroClawMemory> {
+        self.memory.clone()
+    }
+
+    pub fn memory_backend_name(&self) -> &str {
+        self.memory.name()
+    }
+
+    pub fn execution_context(&self) -> ZeroClawExecutionContext {
+        ZeroClawExecutionContext {
+            runtime_name: self.runtime.name().into(),
+            has_shell_access: self.runtime.has_shell_access(),
+            has_filesystem_access: self.runtime.has_filesystem_access(),
+            supports_long_running: self.runtime.supports_long_running(),
+            storage_path: self.runtime.storage_path(),
+            tool_substrate: self.tool_substrate.into(),
+            memory_backend: self.memory.name().into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ZeroClawProceduralMemory {
+    inner: InMemoryProceduralMemory,
+}
+
+impl ZeroClawProceduralMemory {
+    pub fn new(inner: InMemoryProceduralMemory) -> Self {
+        Self { inner }
+    }
+
+    fn entry_from_procedure(procedure: StoredProcedure) -> ZeroClawMemoryEntry {
+        let category = procedure
+            .metadata
+            .get("zeroclaw_category")
+            .map(|category| category_from_label(category))
+            .unwrap_or(ZeroClawMemoryCategory::Core);
+        let session_id = procedure.metadata.get("zeroclaw_session_id").cloned();
+
+        ZeroClawMemoryEntry {
+            id: procedure.id.clone(),
+            key: procedure.id,
+            content: procedure.summary,
+            category,
+            timestamp: "1970-01-01T00:00:00Z".into(),
+            session_id,
+            score: None,
+        }
+    }
+}
+
+#[async_trait]
+impl ZeroClawMemory for ZeroClawProceduralMemory {
+    fn name(&self) -> &str {
+        "quantumclaw-procedural-memory"
+    }
+
+    async fn store(
+        &self,
+        key: &str,
+        content: &str,
+        category: ZeroClawMemoryCategory,
+        session_id: Option<&str>,
+    ) -> anyhow::Result<()> {
+        let keywords = content
+            .split(|character: char| !character.is_ascii_alphanumeric())
+            .filter(|token| token.len() >= 3)
+            .take(16)
+            .map(str::to_ascii_lowercase);
+        let mut procedure = StoredProcedure::new(key, content, keywords);
+        procedure
+            .metadata
+            .insert("zeroclaw_category".into(), category.to_string());
+        if let Some(session_id) = session_id {
+            procedure
+                .metadata
+                .insert("zeroclaw_session_id".into(), session_id.into());
+        }
+        self.inner
+            .store_procedure(procedure)
+            .await
+            .map_err(|error| anyhow::anyhow!(error.to_string()))
+    }
+
+    async fn recall(
+        &self,
+        query: &str,
+        limit: usize,
+        session_id: Option<&str>,
+    ) -> anyhow::Result<Vec<ZeroClawMemoryEntry>> {
+        let procedures = self
+            .inner
+            .retrieve_similar(query, limit)
+            .await
+            .map_err(|error| anyhow::anyhow!(error.to_string()))?;
+        Ok(procedures
+            .into_iter()
+            .filter(|procedure| {
+                session_id.is_none_or(|session_id| {
+                    procedure
+                        .metadata
+                        .get("zeroclaw_session_id")
+                        .is_some_and(|stored| stored == session_id)
+                })
+            })
+            .map(Self::entry_from_procedure)
+            .collect())
+    }
+
+    async fn get(&self, key: &str) -> anyhow::Result<Option<ZeroClawMemoryEntry>> {
+        Ok(self
+            .inner
+            .all_procedures()
+            .into_iter()
+            .find(|procedure| procedure.id == key)
+            .map(Self::entry_from_procedure))
+    }
+
+    async fn list(
+        &self,
+        category: Option<&ZeroClawMemoryCategory>,
+        session_id: Option<&str>,
+    ) -> anyhow::Result<Vec<ZeroClawMemoryEntry>> {
+        Ok(self
+            .inner
+            .all_procedures()
+            .into_iter()
+            .filter(|procedure| {
+                let category_matches = category.is_none_or(|expected| {
+                    procedure
+                        .metadata
+                        .get("zeroclaw_category")
+                        .is_some_and(|stored| stored == &expected.to_string())
+                });
+                let session_matches = session_id.is_none_or(|expected| {
+                    procedure
+                        .metadata
+                        .get("zeroclaw_session_id")
+                        .is_some_and(|stored| stored == expected)
+                });
+                category_matches && session_matches
+            })
+            .map(Self::entry_from_procedure)
+            .collect())
+    }
+
+    async fn forget(&self, key: &str) -> anyhow::Result<bool> {
+        Ok(self.inner.forget_procedure(key))
+    }
+
+    async fn count(&self) -> anyhow::Result<usize> {
+        Ok(self.inner.count_procedures())
+    }
+
+    async fn health_check(&self) -> bool {
+        true
+    }
+}
+
+fn category_from_label(label: &str) -> ZeroClawMemoryCategory {
+    match label {
+        "core" => ZeroClawMemoryCategory::Core,
+        "daily" => ZeroClawMemoryCategory::Daily,
+        "conversation" => ZeroClawMemoryCategory::Conversation,
+        other => ZeroClawMemoryCategory::Custom(other.into()),
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PromptTemplate {
@@ -146,10 +360,12 @@ pub struct RuntimeExecutionReport {
     pub execution: SimulatedExecution,
     pub telemetry: ExecutionTrace,
     pub learned_skill: Skill,
+    pub zeroclaw: ZeroClawExecutionContext,
 }
 
 #[derive(Clone)]
 pub struct QuantumClawRuntime {
+    pub zeroclaw: ZeroClawBase,
     pub planner: HybridPlanner,
     pub backends: Vec<Arc<dyn SolverBackend>>,
     pub memory: InMemoryProceduralMemory,
@@ -167,8 +383,21 @@ impl QuantumClawRuntime {
         policy: DeterministicPolicyEngine,
         observer: InMemoryObserver,
     ) -> Self {
+        let zeroclaw = ZeroClawBase::native(memory.clone());
+        Self::new_with_zeroclaw_base(backends, memory, tools, policy, observer, zeroclaw)
+    }
+
+    pub fn new_with_zeroclaw_base(
+        backends: Vec<Arc<dyn SolverBackend>>,
+        memory: InMemoryProceduralMemory,
+        tools: InMemoryToolRegistry,
+        policy: DeterministicPolicyEngine,
+        observer: InMemoryObserver,
+        zeroclaw: ZeroClawBase,
+    ) -> Self {
         let skill_pipeline = SkillLearningPipeline::new(memory.clone());
         Self {
+            zeroclaw,
             planner: HybridPlanner::default(),
             backends,
             memory,
@@ -189,6 +418,14 @@ impl QuantumClawRuntime {
         self.observer.record_trace(TraceEvent::new(
             "session.created",
             "runtime session created",
+        ));
+        let zeroclaw_context = self.zeroclaw.execution_context();
+        self.observer.record_trace(TraceEvent::new(
+            "zeroclaw.base.ready",
+            format!(
+                "using ZeroClaw {} runtime with {} tool substrate",
+                zeroclaw_context.runtime_name, zeroclaw_context.tool_substrate
+            ),
         ));
 
         let retrieved = self.memory.retrieve_similar(&task, 5).await?;
@@ -294,6 +531,7 @@ impl QuantumClawRuntime {
             },
             telemetry: self.observer.execution_trace(),
             learned_skill,
+            zeroclaw: zeroclaw_context,
         })
     }
 }

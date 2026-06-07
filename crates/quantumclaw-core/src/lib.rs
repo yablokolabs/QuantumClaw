@@ -285,8 +285,8 @@ impl CoreToolResult {
 
 #[async_trait]
 pub trait Tool: Send + Sync {
-    fn name(&self) -> &'static str;
-    fn description(&self) -> &'static str;
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
     async fn call(&self, call: CoreToolCall) -> Result<CoreToolResult>;
 }
 

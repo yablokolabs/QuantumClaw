@@ -6,8 +6,10 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+anyhow = { workspace = true }
 serde = { workspace = true }
 async-trait = { workspace = true }
 serde_json = { workspace = true }
 quantumclaw-core = { workspace = true }
 quantumclaw-ir = { workspace = true }
+zeroclaw = { workspace = true }

@@ -8,26 +8,36 @@ QuantumClaw is a general-purpose claw runtime for autonomous agents. It brings q
 
 ## What it is
 
-QuantumClaw sits on top of ZeroClaw and provides a strongly typed Rust foundation for long-running, memory-enabled, multi-tool agents. Its differentiator is first-class hybrid planning:
+QuantumClaw sits on top of the real [`zeroclaw`](https://crates.io/crates/zeroclaw) crate and provides a strongly typed Rust foundation for long-running, memory-enabled, multi-tool agents. ZeroClaw supplies the Claw substrate — runtime adapters, tool traits, config, and memory contracts — while QuantumClaw adds the quantum planning layer above it.
+
+Its differentiator is first-class hybrid planning:
 
 - classical planners today
 - quantum-inspired planners now
 - future real quantum backends later
 - no application/runtime rewrite when solver backends change
 
-Planning is not hidden inside prompts or tools. `Planner` and `SolverBackend` are peers of memory, tools, providers, channels, policy, runtime adapters, subagents, and observability.
+Planning is not hidden inside prompts or tools. `Planner` and `SolverBackend` are peers of ZeroClaw-backed memory, tools, providers, channels, policy, runtime adapters, subagents, and observability.
+
+Proof that the base is ZeroClaw:
+
+```sh
+cargo tree -i zeroclaw
+```
+
+Expected result includes `zeroclaw v0.1.7` feeding `quantumclaw-runtime`, `quantumclaw-tools`, and `quantumclaw-app`.
 
 ## Workspace layout
 
 - `quantumclaw-core`: shared platform traits and common runtime types
-- `quantumclaw-runtime`: sessions, channels, routing, orchestration loop, adapters, subagents, policy/tool/planner/memory integration
+- `quantumclaw-runtime`: ZeroClaw-native runtime base, sessions, channels, routing, orchestration loop, adapters, subagents, policy/tool/planner/memory integration
 - `quantumclaw-memory`: working, short-term, episodic, semantic, and procedural memory abstractions
 - `quantumclaw-planner`: planner modes, request/response models, backend selection, explainable plans, shadow comparison
 - `quantumclaw-ir`: backend-neutral decision IR for goals, tasks, constraints, actions, costs, risks, budgets, rollback, and metadata
 - `quantumclaw-solvers-classical`: greedy solver plus classical search/optimization solver stubs
 - `quantumclaw-solvers-qinspired`: quantum-inspired solver stub, QUBO-like and Ising-like placeholder mappings
 - `quantumclaw-solvers-future-qpu`: feature-gated placeholder adapters for future QPU SDK integration
-- `quantumclaw-tools`: generic policy-controlled tool traits, registry, calls, schemas, permissions, and tool stubs
+- `quantumclaw-tools`: adapters around `zeroclaw::tools::Tool`, policy-controlled registry, calls, schemas, permissions, and tool stubs
 - `quantumclaw-policy`: deterministic policy, permissions, risk levels, human confirmation, auditing, domain policy packs
 - `quantumclaw-skills`: procedural skills, templates, execution records, retrievers, recipes, and learning pipeline
 - `quantumclaw-observability`: traces, metrics, backend telemetry, planner comparisons, execution traces, audit sinks
@@ -35,32 +45,9 @@ Planning is not hidden inside prompts or tools. `Planner` and `SolverBackend` ar
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    User[User / Channel] --> Runtime[Runtime Layer]
-    Runtime --> Router[Message Router]
-    Runtime --> Providers[Provider Integration]
-    Runtime --> Tools[Policy-Controlled Tools]
-    Runtime --> Memory[Memory Layer]
-    Runtime --> Observer[Observability]
-    Runtime --> Cognitive[Cognitive Layer]
+![QuantumClaw architecture](docs/diagrams/quantumclaw-architecture.svg)
 
-    Cognitive --> Skills[Learned Procedures / Skills]
-    Cognitive --> Planner[Planner]
-    Cognitive --> Subagents[Subagent Orchestration]
-    Planner --> Encoder[ProblemEncoder]
-    Encoder --> IR[Backend-Neutral DecisionProblem IR]
-    IR --> Classical[Classical SolverBackend]
-    IR --> QInspired[Quantum-Inspired SolverBackend]
-    IR --> FutureQPU[Future QPU Adapter]
-    Classical --> Decoder[PlanDecoder]
-    QInspired --> Decoder
-    FutureQPU --> Decoder
-    Decoder --> Policy[Deterministic Policy Engine]
-    Policy --> Execution[Execution Pipeline]
-    Execution --> Audit[Audit + Rollback]
-    Execution --> Skills
-```
+Rendered from [`docs/diagrams/quantumclaw-architecture.mmd`](docs/diagrams/quantumclaw-architecture.mmd).
 
 ## Architecture layers
 

@@ -22,3 +22,4 @@ quantumclaw-policy = { workspace = true }
 quantumclaw-skills = { workspace = true }
 quantumclaw-observability = { workspace = true }
 tokio = { workspace = true }
+zeroclaw = { workspace = true }

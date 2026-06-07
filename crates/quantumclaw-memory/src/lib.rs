@@ -159,6 +159,23 @@ pub struct InMemoryProceduralMemory {
     records: Arc<RwLock<Vec<StoredProcedure>>>,
 }
 
+impl InMemoryProceduralMemory {
+    pub fn all_procedures(&self) -> Vec<StoredProcedure> {
+        self.records.read().expect("procedural memory lock").clone()
+    }
+
+    pub fn count_procedures(&self) -> usize {
+        self.records.read().expect("procedural memory lock").len()
+    }
+
+    pub fn forget_procedure(&self, id: &str) -> bool {
+        let mut records = self.records.write().expect("procedural memory lock");
+        let before = records.len();
+        records.retain(|record| record.id != id);
+        records.len() != before
+    }
+}
+
 #[async_trait]
 impl ProceduralMemory for InMemoryProceduralMemory {
     async fn store_procedure(&self, procedure: StoredProcedure) -> Result<()> {
