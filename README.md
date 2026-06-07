@@ -42,6 +42,7 @@ Expected result includes `zeroclaw v0.1.7` feeding `quantumclaw-runtime`, `quant
 - `quantumclaw-skills`: procedural skills, templates, execution records, retrievers, recipes, and learning pipeline
 - `quantumclaw-observability`: traces, metrics, backend telemetry, planner comparisons, execution traces, audit sinks
 - `quantumclaw-app`: runnable end-to-end example
+- `spikes`: disposable feasibility experiments for optional solver/backend lanes before they become production crates
 
 ## Architecture
 
@@ -75,6 +76,7 @@ Rendered from [`docs/diagrams/quantumclaw-architecture.mmd`](docs/diagrams/quant
    - classical solvers
    - quantum-inspired solvers
    - future QPU adapters
+   - optional CUDA-Q experiments as spike/backend candidates, not core runtime dependencies
 
 5. **Execution and policy layer**
    - deterministic validation
@@ -150,6 +152,10 @@ Current scaffolding:
 - `QuboLikeProblem` placeholder
 - `IsingLikeMapping` placeholder
 - `FutureQpuBackend` trait and feature-gated future SDK hook
+
+Experimental backend spikes:
+
+- [`spikes/001-cudaq-qaoa-backend`](spikes/001-cudaq-qaoa-backend/): evaluates CUDA-Q as an optional Python sidecar for QAOA-style solving over QuantumClaw's QUBO-like planning payloads. This is intentionally not a core dependency yet; it should graduate only after `ShadowCompare` benchmarks show useful quality/latency tradeoffs.
 
 ## Security and policy model
 
@@ -541,5 +547,6 @@ async fn example() -> quantumclaw_core::Result<()> {
 - Add richer graph encoders for large task/action graphs.
 - Add real beam search, branch-and-bound, annealing, and evolutionary implementations.
 - Add benchmark harness for `ShadowCompare` backend evaluation.
+- Validate the CUDA-Q QAOA sidecar spike in a CUDA-Q-ready CPU/GPU environment before adding a production `quantumclaw-solvers-cudaq` crate.
 - Add optional domain policy packs without changing core identity.
 - Add feature-gated QPU SDK adapters when stable vendor APIs justify integration.

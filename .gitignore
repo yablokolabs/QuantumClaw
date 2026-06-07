@@ -3,6 +3,8 @@
 
 # Rust/editor/OS noise
 *.rs.bk
+*.pyc
+__pycache__/
 .DS_Store
 .idea/
 .vscode/

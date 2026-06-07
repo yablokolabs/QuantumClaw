@@ -1,0 +1,21 @@
+{
+  "variables": [
+    "inspect",
+    "test-first",
+    "small-edit",
+    "validate"
+  ],
+  "linear_weights": [
+    0.78,
+    0.9,
+    0.86,
+    0.93
+  ],
+  "pairwise_penalties": [
+    [0, 1, -0.1],
+    [1, 2, -0.1],
+    [2, 3, -0.1]
+  ],
+  "qaoa_layers": 1,
+  "shots": 512
+}
