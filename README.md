@@ -1,0 +1,408 @@
+# QuantumClaw
+
+**The world's first quantum-powered Claw agent runtime.**
+
+**QuantumClaw = a general-purpose agent runtime built on ZeroClaw, with hybrid classical + quantum-inspired planning, and future quantum backend portability by design.**
+
+QuantumClaw is a general-purpose claw runtime for autonomous agents. It brings quantum-powered planning semantics to the Claw ecosystem: classical planners today, quantum-inspired solvers now, and portable future QPU backends when the hardware/software stack is ready. It is not an IoT or home automation product. Those can exist as optional domain packs, but the product identity is a domain-agnostic runtime for coding agents, research agents, workflow automation, CLI agents, enterprise assistants, messaging agents, browser-capable agents, and future specialized packs.
+
+## What it is
+
+QuantumClaw sits on top of ZeroClaw and provides a strongly typed Rust foundation for long-running, memory-enabled, multi-tool agents. Its differentiator is first-class hybrid planning:
+
+- classical planners today
+- quantum-inspired planners now
+- future real quantum backends later
+- no application/runtime rewrite when solver backends change
+
+Planning is not hidden inside prompts or tools. `Planner` and `SolverBackend` are peers of memory, tools, providers, channels, policy, runtime adapters, subagents, and observability.
+
+## Workspace layout
+
+- `quantumclaw-core`: shared platform traits and common runtime types
+- `quantumclaw-runtime`: sessions, channels, routing, orchestration loop, adapters, subagents, policy/tool/planner/memory integration
+- `quantumclaw-memory`: working, short-term, episodic, semantic, and procedural memory abstractions
+- `quantumclaw-planner`: planner modes, request/response models, backend selection, explainable plans, shadow comparison
+- `quantumclaw-ir`: backend-neutral decision IR for goals, tasks, constraints, actions, costs, risks, budgets, rollback, and metadata
+- `quantumclaw-solvers-classical`: greedy solver plus classical search/optimization solver stubs
+- `quantumclaw-solvers-qinspired`: quantum-inspired solver stub, QUBO-like and Ising-like placeholder mappings
+- `quantumclaw-solvers-future-qpu`: feature-gated placeholder adapters for future QPU SDK integration
+- `quantumclaw-tools`: generic policy-controlled tool traits, registry, calls, schemas, permissions, and tool stubs
+- `quantumclaw-policy`: deterministic policy, permissions, risk levels, human confirmation, auditing, domain policy packs
+- `quantumclaw-skills`: procedural skills, templates, execution records, retrievers, recipes, and learning pipeline
+- `quantumclaw-observability`: traces, metrics, backend telemetry, planner comparisons, execution traces, audit sinks
+- `quantumclaw-app`: runnable end-to-end example
+
+## Architecture
+
+```mermaid
+flowchart TD
+    User[User / Channel] --> Runtime[Runtime Layer]
+    Runtime --> Router[Message Router]
+    Runtime --> Providers[Provider Integration]
+    Runtime --> Tools[Policy-Controlled Tools]
+    Runtime --> Memory[Memory Layer]
+    Runtime --> Observer[Observability]
+    Runtime --> Cognitive[Cognitive Layer]
+
+    Cognitive --> Skills[Learned Procedures / Skills]
+    Cognitive --> Planner[Planner]
+    Cognitive --> Subagents[Subagent Orchestration]
+    Planner --> Encoder[ProblemEncoder]
+    Encoder --> IR[Backend-Neutral DecisionProblem IR]
+    IR --> Classical[Classical SolverBackend]
+    IR --> QInspired[Quantum-Inspired SolverBackend]
+    IR --> FutureQPU[Future QPU Adapter]
+    Classical --> Decoder[PlanDecoder]
+    QInspired --> Decoder
+    FutureQPU --> Decoder
+    Decoder --> Policy[Deterministic Policy Engine]
+    Policy --> Execution[Execution Pipeline]
+    Execution --> Audit[Audit + Rollback]
+    Execution --> Skills
+```
+
+## Architecture layers
+
+1. **Runtime layer**
+   - sessions
+   - channels
+   - message routing
+   - tool calling
+   - prompts
+   - provider integration
+   - observability
+   - runtime adapters
+
+2. **Cognitive layer**
+   - task decomposition
+   - planning
+   - subagent orchestration
+   - memory interaction
+   - learned procedures
+
+3. **Problem layer**
+   - backend-neutral IR for goals, tasks, constraints, actions, scoring, risks, budgets, and rollback
+
+4. **Solver layer**
+   - classical solvers
+   - quantum-inspired solvers
+   - future QPU adapters
+
+5. **Execution and policy layer**
+   - deterministic validation
+   - permissions
+   - tool execution
+   - retries
+   - auditing
+   - rollback
+
+## Core traits
+
+QuantumClaw exposes these platform traits as first-class extension points:
+
+- `AgentRuntime`
+- `Planner`
+- `ProblemEncoder`
+- `SolverBackend`
+- `PlanDecoder`
+- `MemoryStore`
+- `SkillStore`
+- `Tool`
+- `ToolRegistry`
+- `PolicyEngine`
+- `Observer`
+- `SubagentRegistry`
+- `RuntimeAdapter`
+
+## Planner modes
+
+- `Reactive`: favor low-latency classical planning
+- `Deliberative`: favor richer planning when latency allows
+- `Hybrid`: combine classical and quantum-inspired candidates
+- `ClassicalOnly`: force classical backend selection
+- `QuantumInspiredPreferred`: prefer quantum-inspired backend when present
+- `Auto`: select from task type, latency budget, confidence, environment, and policy
+- `ShadowCompare`: one backend produces the executable plan while another runs silently for telemetry and benchmarking
+
+## IR overview
+
+`quantumclaw-ir` defines a backend-neutral `DecisionProblem` made of:
+
+- `Goal`
+- `Subtask`
+- `CandidateAction`
+- `Dependency`
+- `Preconditions`
+- `Postconditions`
+- `Constraint`
+- `CostModel`
+- `RiskModel`
+- `UtilityScore`
+- `Deadline`
+- `ResourceBudget`
+- `ConfidenceEstimate`
+- `RollbackStrategy`
+- `ExecutionMetadata`
+
+The IR does not encode a solver implementation. Classical, quantum-inspired, and future QPU backends consume the same problem shape.
+
+## Solver backend model
+
+A `SolverBackend` receives a `DecisionProblem` plus execution context and returns scored plan candidates with telemetry. The runtime and application layer depend on the trait, not on a solver implementation.
+
+Current scaffolding:
+
+- `GreedySolver`
+- `BeamSearchSolver` stub
+- `HeuristicSearchSolver` stub
+- `BranchAndBoundSolver` stub
+- `SimulatedAnnealingSolver` stub
+- `EvolutionarySolver` stub
+- `QuantumInspiredSolver` stub
+- `QuboLikeProblem` placeholder
+- `IsingLikeMapping` placeholder
+- `FutureQpuBackend` trait and feature-gated future SDK hook
+
+## Security and policy model
+
+QuantumClaw separates deterministic policy from probabilistic planning.
+
+The policy layer can:
+
+- validate permissions
+- restrict unsafe tool use
+- require human confirmation above risk thresholds
+- audit proposed plans
+- audit executed plans
+- apply domain-specific policy packs
+
+The planner may propose. The policy engine decides what can execute.
+
+## Procedural learning model
+
+QuantumClaw supports procedural learning without model fine-tuning:
+
+1. Capture successful executions.
+2. Summarize why the execution worked.
+3. Convert the result into reusable skills, plans, or templates.
+4. Store it in procedural memory.
+5. Retrieve similar skills for future tasks.
+
+The `quantumclaw-skills` crate includes `Skill`, `SkillTemplate`, `SkillExecutionRecord`, `SkillLearningPipeline`, `SkillRetriever`, and `PlanningRecipe`.
+
+## Example task flow
+
+The runnable app demonstrates:
+
+> “Plan a safe coding refactor for a Rust module.”
+
+Flow:
+
+1. User asks for refactor.
+2. Runtime creates a session.
+3. Memory retrieves relevant prior procedures.
+4. Planner creates a `DecisionProblem`.
+5. Classical or quantum-inspired backend proposes plans.
+6. Policy validates the plan.
+7. Tool registry resolves code/file/shell tools.
+8. Runtime simulates execution.
+9. Observer records telemetry.
+10. Successful plan is converted into a reusable procedural skill.
+
+Run it:
+
+```sh
+cargo run -p quantumclaw-app
+```
+
+Run tests:
+
+```sh
+cargo test
+```
+
+## Usage examples
+
+### Run the end-to-end demo
+
+```sh
+cargo run -p quantumclaw-app
+```
+
+Expected shape:
+
+```text
+QuantumClaw demo completed
+task: Plan a safe coding refactor for a Rust module.
+backend: quantum-inspired-hybrid
+steps: 4
+learned_skill: skill-plan-a-safe-coding-refactor-for-a-rust-module
+```
+
+### Use QuantumClaw as an embedded runtime
+
+```rust
+use quantumclaw_core::SolverBackend;
+use quantumclaw_memory::InMemoryProceduralMemory;
+use quantumclaw_observability::InMemoryObserver;
+use quantumclaw_policy::DeterministicPolicyEngine;
+use quantumclaw_runtime::QuantumClawRuntime;
+use quantumclaw_solvers_classical::GreedySolver;
+use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
+use quantumclaw_tools::InMemoryToolRegistry;
+use std::sync::Arc;
+
+#[tokio::main]
+async fn main() -> quantumclaw_core::Result<()> {
+    let backends: Vec<Arc<dyn SolverBackend>> = vec![
+        Arc::new(GreedySolver),
+        Arc::new(QuantumInspiredSolver::default()),
+    ];
+
+    let runtime = QuantumClawRuntime::new(
+        backends,
+        InMemoryProceduralMemory::default(),
+        InMemoryToolRegistry::with_default_tools(),
+        DeterministicPolicyEngine::default(),
+        InMemoryObserver::default(),
+    );
+
+    let report = runtime
+        .handle_user_task("Plan a safe coding refactor for a Rust module.")
+        .await?;
+
+    println!("selected backend: {}", report.plan.backend);
+    println!("learned skill: {}", report.learned_skill.id);
+    Ok(())
+}
+```
+
+### Switch planner backends without changing runtime code
+
+```rust
+use quantumclaw_core::{AgentTask, SolverKind};
+use quantumclaw_planner::{HybridPlanner, PlannerMode, PlannerRequest};
+use quantumclaw_solvers_classical::GreedySolver;
+use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
+use std::sync::Arc;
+
+async fn example() -> quantumclaw_core::Result<()> {
+    let planner = HybridPlanner::default();
+    let task = AgentTask::new("Plan a research workflow");
+
+    let classical = planner
+        .plan(
+            PlannerRequest::new(task.clone())
+                .with_mode(PlannerMode::ClassicalOnly)
+                .with_backend(Arc::new(GreedySolver))
+                .with_backend(Arc::new(QuantumInspiredSolver::default())),
+        )
+        .await?;
+
+    let qinspired = planner
+        .plan(
+            PlannerRequest::new(task)
+                .with_mode(PlannerMode::QuantumInspiredPreferred)
+                .with_backend(Arc::new(GreedySolver))
+                .with_backend(Arc::new(QuantumInspiredSolver::default())),
+        )
+        .await?;
+
+    assert_eq!(classical.primary_plan().backend_kind, SolverKind::Classical);
+    assert_eq!(qinspired.primary_plan().backend_kind, SolverKind::QuantumInspired);
+    Ok(())
+}
+```
+
+### Run ShadowCompare for backend benchmarking
+
+```rust
+use quantumclaw_core::{AgentTask, SolverKind};
+use quantumclaw_planner::{BackendSelectionPolicy, HybridPlanner, PlannerMode, PlannerRequest};
+use quantumclaw_solvers_classical::GreedySolver;
+use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
+use std::sync::Arc;
+
+async fn example() -> quantumclaw_core::Result<()> {
+    let response = HybridPlanner::default()
+        .plan(
+            PlannerRequest::new(AgentTask::new("Compare planning backends"))
+                .with_mode(PlannerMode::ShadowCompare)
+                .with_selection_policy(
+                    BackendSelectionPolicy::prefer(SolverKind::Classical).with_shadow(true),
+                )
+                .with_backend(Arc::new(GreedySolver))
+                .with_backend(Arc::new(QuantumInspiredSolver::default())),
+        )
+        .await?;
+
+    let comparison = response.telemetry.shadow_comparison.expect("shadow telemetry");
+    println!("primary: {}", comparison.primary_backend);
+    println!("shadow: {}", comparison.shadow_backend);
+    Ok(())
+}
+```
+
+### Store and retrieve procedural memory
+
+```rust
+use quantumclaw_memory::{InMemoryProceduralMemory, ProceduralMemory, StoredProcedure};
+
+async fn example() -> quantumclaw_core::Result<()> {
+    let memory = InMemoryProceduralMemory::default();
+
+    memory
+        .store_procedure(StoredProcedure::new(
+            "safe-rust-refactor",
+            "Inspect interfaces, add tests, make small reversible edits, then validate.",
+            ["rust", "refactor", "tests", "validation"],
+        ))
+        .await?;
+
+    let matches = memory
+        .retrieve_similar("refactor a Rust module with validation", 3)
+        .await?;
+
+    assert_eq!(matches[0].id, "safe-rust-refactor");
+    Ok(())
+}
+```
+
+### Validate a plan with deterministic policy
+
+```rust
+use quantumclaw_core::SolverKind;
+use quantumclaw_planner::{Plan, PlanScore, PlanStep, PlannerRationale};
+use quantumclaw_policy::{DeterministicPolicyEngine, RiskLevel};
+
+async fn example() -> quantumclaw_core::Result<()> {
+    let plan = Plan {
+        id: "safe-plan".into(),
+        backend: "greedy-classical".into(),
+        backend_kind: SolverKind::Classical,
+        steps: vec![PlanStep::new("run test suite", "shell").with_risk(RiskLevel::Medium)],
+        score: PlanScore::default(),
+        rationale: PlannerRationale::new("Small reversible execution plan"),
+        metadata: Default::default(),
+    };
+
+    let decision = DeterministicPolicyEngine::default()
+        .evaluate_plan(&plan)
+        .await?;
+
+    assert!(decision.allowed);
+    Ok(())
+}
+```
+
+## Roadmap
+
+- Add richer deterministic validators for plan preconditions and postconditions.
+- Add provider adapters for local and remote model APIs.
+- Add durable memory backends beyond in-memory stores.
+- Add richer graph encoders for large task/action graphs.
+- Add real beam search, branch-and-bound, annealing, and evolutionary implementations.
+- Add benchmark harness for `ShadowCompare` backend evaluation.
+- Add optional domain policy packs without changing core identity.
+- Add feature-gated QPU SDK adapters when stable vendor APIs justify integration.

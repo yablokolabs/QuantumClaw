@@ -1,0 +1,17 @@
+/target/
+**/target/
+
+# Rust/editor/OS noise
+*.rs.bk
+.DS_Store
+.idea/
+.vscode/
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx

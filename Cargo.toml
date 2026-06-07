@@ -1,0 +1,41 @@
+[workspace]
+members = [
+    "crates/quantumclaw-core",
+    "crates/quantumclaw-runtime",
+    "crates/quantumclaw-memory",
+    "crates/quantumclaw-planner",
+    "crates/quantumclaw-ir",
+    "crates/quantumclaw-solvers-classical",
+    "crates/quantumclaw-solvers-qinspired",
+    "crates/quantumclaw-solvers-future-qpu",
+    "crates/quantumclaw-tools",
+    "crates/quantumclaw-policy",
+    "crates/quantumclaw-skills",
+    "crates/quantumclaw-observability",
+    "crates/quantumclaw-app",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+repository = "https://example.invalid/yablokolabs/QuantumClaw"
+
+[workspace.dependencies]
+async-trait = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time"] }
+
+quantumclaw-core = { path = "crates/quantumclaw-core" }
+quantumclaw-runtime = { path = "crates/quantumclaw-runtime" }
+quantumclaw-memory = { path = "crates/quantumclaw-memory" }
+quantumclaw-planner = { path = "crates/quantumclaw-planner" }
+quantumclaw-ir = { path = "crates/quantumclaw-ir" }
+quantumclaw-solvers-classical = { path = "crates/quantumclaw-solvers-classical" }
+quantumclaw-solvers-qinspired = { path = "crates/quantumclaw-solvers-qinspired" }
+quantumclaw-solvers-future-qpu = { path = "crates/quantumclaw-solvers-future-qpu" }
+quantumclaw-tools = { path = "crates/quantumclaw-tools" }
+quantumclaw-policy = { path = "crates/quantumclaw-policy" }
+quantumclaw-skills = { path = "crates/quantumclaw-skills" }
+quantumclaw-observability = { path = "crates/quantumclaw-observability" }

@@ -1,0 +1,12 @@
+[package]
+name = "quantumclaw-observability"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+async-trait = { workspace = true }
+serde_json = { workspace = true }
+quantumclaw-core = { workspace = true }
