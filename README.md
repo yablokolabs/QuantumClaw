@@ -1,5 +1,7 @@
 # QuantumClaw
 
+[![Crates.io](https://img.shields.io/crates/v/quantumclaw)](https://crates.io/crates/quantumclaw)
+
 **The world's first quantum-powered Claw agent runtime.**
 
 **QuantumClaw = a general-purpose agent runtime built on ZeroClaw, with hybrid classical + quantum-inspired planning, and future quantum backend portability by design.**
