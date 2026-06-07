@@ -36,7 +36,9 @@ QuantumClaw is distributed on crates.io as a **single public crate**:
 quantumclaw = "0.1.0"
 ```
 
-All implementation components remain internal workspace crates with `publish = false`. They are hidden from crates.io so consumers have one public dependency surface: `quantumclaw`. The publishable crate mirrors and re-exports the internal component APIs from its crate root.
+All implementation components remain internal workspace crates with `publish = false`. They are hidden from crates.io so consumers have one public dependency surface: `quantumclaw`. Application code should use `use quantumclaw::prelude::*;` or short module paths such as `quantumclaw::planner`, `quantumclaw::runtime`, `quantumclaw::memory`, `quantumclaw::tools`, and `quantumclaw::policy`.
+
+The publishable crate mirrors internal component APIs into one product, one brand, one crate. End users should not depend on, import, or need to know `quantumclaw-core`, `quantumclaw-runtime`, `quantumclaw-planner`, or any other internal crate.
 
 ## Workspace layout
 
@@ -128,7 +130,7 @@ QuantumClaw exposes these platform traits as first-class extension points:
 
 ## IR overview
 
-`quantumclaw-ir` defines a backend-neutral `DecisionProblem` made of:
+`quantumclaw::ir` exposes a backend-neutral `DecisionProblem` made of:
 
 - `Goal`
 - `Subtask`
@@ -194,7 +196,7 @@ QuantumClaw supports procedural learning without model fine-tuning:
 4. Store it in procedural memory.
 5. Retrieve similar skills for future tasks.
 
-The `quantumclaw-skills` crate includes `Skill`, `SkillTemplate`, `SkillExecutionRecord`, `SkillLearningPipeline`, `SkillRetriever`, and `PlanningRecipe`.
+The `quantumclaw::skills` module exposes `Skill`, `SkillTemplate`, `SkillExecutionRecord`, `SkillLearningPipeline`, `SkillRetriever`, and `PlanningRecipe`.
 
 ## Example task flow
 
@@ -398,18 +400,11 @@ learned_skill: skill-plan-a-safe-coding-refactor-for-a-rust-module
 ### Use QuantumClaw as an embedded runtime
 
 ```rust
-use quantumclaw_core::SolverBackend;
-use quantumclaw_memory::InMemoryProceduralMemory;
-use quantumclaw_observability::InMemoryObserver;
-use quantumclaw_policy::DeterministicPolicyEngine;
-use quantumclaw_runtime::QuantumClawRuntime;
-use quantumclaw_solvers_classical::GreedySolver;
-use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
-use quantumclaw_tools::InMemoryToolRegistry;
+use quantumclaw::prelude::*;
 use std::sync::Arc;
 
 #[tokio::main]
-async fn main() -> quantumclaw_core::Result<()> {
+async fn main() -> Result<()> {
     let backends: Vec<Arc<dyn SolverBackend>> = vec![
         Arc::new(GreedySolver),
         Arc::new(QuantumInspiredSolver::default()),
@@ -436,13 +431,10 @@ async fn main() -> quantumclaw_core::Result<()> {
 ### Switch planner backends without changing runtime code
 
 ```rust
-use quantumclaw_core::{AgentTask, SolverKind};
-use quantumclaw_planner::{HybridPlanner, PlannerMode, PlannerRequest};
-use quantumclaw_solvers_classical::GreedySolver;
-use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
+use quantumclaw::prelude::*;
 use std::sync::Arc;
 
-async fn example() -> quantumclaw_core::Result<()> {
+async fn example() -> Result<()> {
     let planner = HybridPlanner::default();
     let task = AgentTask::new("Plan a research workflow");
 
@@ -473,13 +465,10 @@ async fn example() -> quantumclaw_core::Result<()> {
 ### Run ShadowCompare for backend benchmarking
 
 ```rust
-use quantumclaw_core::{AgentTask, SolverKind};
-use quantumclaw_planner::{BackendSelectionPolicy, HybridPlanner, PlannerMode, PlannerRequest};
-use quantumclaw_solvers_classical::GreedySolver;
-use quantumclaw_solvers_qinspired::QuantumInspiredSolver;
+use quantumclaw::prelude::*;
 use std::sync::Arc;
 
-async fn example() -> quantumclaw_core::Result<()> {
+async fn example() -> Result<()> {
     let response = HybridPlanner::default()
         .plan(
             PlannerRequest::new(AgentTask::new("Compare planning backends"))
@@ -502,9 +491,9 @@ async fn example() -> quantumclaw_core::Result<()> {
 ### Store and retrieve procedural memory
 
 ```rust
-use quantumclaw_memory::{InMemoryProceduralMemory, ProceduralMemory, StoredProcedure};
+use quantumclaw::prelude::*;
 
-async fn example() -> quantumclaw_core::Result<()> {
+async fn example() -> Result<()> {
     let memory = InMemoryProceduralMemory::default();
 
     memory
@@ -527,11 +516,9 @@ async fn example() -> quantumclaw_core::Result<()> {
 ### Validate a plan with deterministic policy
 
 ```rust
-use quantumclaw_core::SolverKind;
-use quantumclaw_planner::{Plan, PlanScore, PlanStep, PlannerRationale};
-use quantumclaw_policy::{DeterministicPolicyEngine, RiskLevel};
+use quantumclaw::prelude::*;
 
-async fn example() -> quantumclaw_core::Result<()> {
+async fn example() -> Result<()> {
     let plan = Plan {
         id: "safe-plan".into(),
         backend: "greedy-classical".into(),
