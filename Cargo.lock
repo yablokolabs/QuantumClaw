@@ -2036,6 +2036,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "quantumclaw-assistant"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "quantumclaw-core",
+ "quantumclaw-planner",
+ "quantumclaw-policy",
+ "quantumclaw-solvers-classical",
+ "quantumclaw-solvers-qinspired",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "zeroclaw",
+]
+
+[[package]]
 name = "quantumclaw-core"
 version = "0.1.0"
 dependencies = [
