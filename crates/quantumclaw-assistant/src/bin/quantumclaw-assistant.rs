@@ -3,7 +3,12 @@ use quantumclaw_assistant::{
     quantum_plan_context, AssistantConfig, AssistantRunner, SarvamProvider, WorkspaceTools,
 };
 use serde::Serialize;
+use std::ffi::OsStr;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
+#[cfg(unix)]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::path::Path;
 use std::path::PathBuf;
 
 #[derive(Debug)]
@@ -31,6 +36,7 @@ async fn main() {
 
 async fn run() -> Result<()> {
     let cli = parse_args(std::env::args().skip(1))?;
+    validate_isolation_ack(std::env::var_os("QUANTUMCLAW_ASSISTANT_ISOLATED").as_deref())?;
     let task = std::fs::read_to_string(&cli.task_file)
         .with_context(|| format!("failed to read task file {}", cli.task_file.display()))?;
     let planner = quantum_plan_context(&task).await?;
@@ -54,11 +60,7 @@ async fn run() -> Result<()> {
             if let Some(parent) = path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::OpenOptions::new()
-                .create(true)
-                .truncate(true)
-                .write(true)
-                .open(path)
+            open_private_output(&path)
         })
         .transpose()?;
     let mut event_error = None;
@@ -91,7 +93,9 @@ async fn run() -> Result<()> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(&path, format!("{output}\n"))?;
+        let mut file = open_private_output(&path)?;
+        file.write_all(format!("{output}\n").as_bytes())?;
+        file.flush()?;
         println!("QuantumClaw report written to {}", path.display());
     } else {
         println!("{output}");
@@ -130,7 +134,7 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Cli> {
             }
             "-h" | "--help" => {
                 println!(
-                    "quantumclaw-assistant \\\n  --workspace PATH \\\n  --task-file PATH \\\n  [--report PATH] \\\n  [--max-turns 40] \\\n  [--max-total-tokens 180000]\n\nSARVAM_API_KEY must be present in the process environment."
+                    "quantumclaw-assistant \\\n  --workspace PATH \\\n  --task-file PATH \\\n  [--report PATH] \\\n  [--max-turns 40] \\\n  [--max-total-tokens 180000]\n\nSARVAM_API_KEY must be supplied through the process environment or a systemd credential.\nQUANTUMCLAW_ASSISTANT_ISOLATED=1 must be set by the trusted OS-sandbox supervisor."
                 );
                 std::process::exit(0);
             }
@@ -150,4 +154,54 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Cli> {
 fn next_value(args: &mut impl Iterator<Item = String>, flag: &str) -> Result<String> {
     args.next()
         .with_context(|| format!("{flag} requires a value"))
+}
+
+fn validate_isolation_ack(value: Option<&OsStr>) -> Result<()> {
+    if value != Some(OsStr::new("1")) {
+        bail!(
+            "refusing unsandboxed execution: cargo and rustc can execute workspace code; run under a trusted OS sandbox and set QUANTUMCLAW_ASSISTANT_ISOLATED=1"
+        );
+    }
+    Ok(())
+}
+
+fn open_private_output(path: &Path) -> Result<File> {
+    let mut options = OpenOptions::new();
+    options.create(true).truncate(true).write(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+
+    let file = options
+        .open(path)
+        .with_context(|| format!("failed to open private output {}", path.display()))?;
+    #[cfg(unix)]
+    file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+    Ok(file)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{open_private_output, validate_isolation_ack};
+    use std::ffi::OsStr;
+
+    #[test]
+    fn isolation_ack_fails_closed() {
+        assert!(validate_isolation_ack(None).is_err());
+        assert!(validate_isolation_ack(Some(OsStr::new("0"))).is_err());
+        assert!(validate_isolation_ack(Some(OsStr::new("1"))).is_ok());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn persisted_output_is_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("events.jsonl");
+        drop(open_private_output(&path).unwrap());
+        assert_eq!(
+            std::fs::metadata(path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
 }
