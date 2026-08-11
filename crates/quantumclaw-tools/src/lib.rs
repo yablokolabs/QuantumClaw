@@ -70,12 +70,22 @@ impl CoreTool for ZeroClawToolAdapter {
 
         Ok(CoreToolResult {
             success: result.success,
-            output: Value::String(result.output),
+            output: decode_tool_output(result.output),
             metadata: result
                 .error
                 .map(|error| BTreeMap::from([("zeroclaw_error".into(), error)]))
                 .unwrap_or_default(),
         })
+    }
+}
+
+/// ZeroClaw tool output is text. Tools that produce structured results encode
+/// them as JSON, so parse that back rather than handing callers a string that
+/// merely looks like an object.
+fn decode_tool_output(output: String) -> Value {
+    match serde_json::from_str::<Value>(&output) {
+        Ok(value) if value.is_object() || value.is_array() => value,
+        _ => Value::String(output),
     }
 }
 

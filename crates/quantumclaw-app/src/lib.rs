@@ -1,3 +1,7 @@
+pub mod wiring;
+
+pub use wiring::{brain_registry, solver_registry, tool_registry};
+
 use quantumclaw_core::{Result, SolverBackend};
 use quantumclaw_memory::{InMemoryProceduralMemory, ProceduralMemory, StoredProcedure};
 use quantumclaw_observability::InMemoryObserver;

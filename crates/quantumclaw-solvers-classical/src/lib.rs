@@ -219,6 +219,7 @@ async fn solve_classical(
         },
         rationale: rationale.into(),
         telemetry,
+        solution: None,
     })
 }
 

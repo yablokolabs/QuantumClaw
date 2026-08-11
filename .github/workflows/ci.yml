@@ -30,3 +30,44 @@ jobs:
 
       - name: Test
         run: cargo test --workspace --all-features
+
+      - name: Public crate mirror is in sync
+        run: |
+          python3 scripts/mirror_public_crate.py
+          git diff --exit-code crates/quantumclaw/src
+
+  dwave-local:
+    name: D-Wave Ocean bridge (local samplers only)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Local classical samplers only: dimod and dwave-samplers. No cloud
+      # client, no credentials, no paid D-Wave resources.
+      - name: Install the Ocean bridge
+        run: pip install "./crates/quantumclaw-providers-dwave/python[local,test]"
+
+      - name: Bridge unit tests
+        run: pytest crates/quantumclaw-providers-dwave/python/tests -q
+        env:
+          QUANTUMCLAW_DWAVE_REQUIRE: "1"
+
+      # QUANTUMCLAW_DWAVE_REQUIRE=1 turns a skip into a failure, so this job
+      # proves the Ocean lane really executed.
+      - name: Ocean integration tests
+        run: cargo test --workspace --all-features
+        env:
+          QUANTUMCLAW_DWAVE_PYTHON: python
+          QUANTUMCLAW_DWAVE_REQUIRE: "1"

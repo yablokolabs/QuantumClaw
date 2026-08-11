@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use quantumclaw_ir::optimization::OptimizationSolution;
 use quantumclaw_ir::{DecisionProblem, ExecutionMetadata};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -44,8 +45,16 @@ pub type Result<T> = std::result::Result<T, QuantumClawError>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SolverKind {
+    /// Runs entirely on classical hardware. Simulated annealing and exhaustive
+    /// search belong here even when they are driven through a quantum vendor's
+    /// SDK.
     Classical,
     QuantumInspired,
+    /// Managed solvers that combine classical compute with quantum hardware,
+    /// such as D-Wave Leap hybrid solvers.
+    QuantumHybrid,
+    /// Quantum annealing hardware, such as a D-Wave QPU.
+    QuantumAnnealing,
     FutureQpu,
     Unknown,
 }
@@ -177,6 +186,15 @@ pub struct BackendTelemetry {
     pub cost_estimate: f64,
     pub confidence: f64,
     pub notes: Vec<String>,
+    /// Provider that executed the solve, for example `dwave`. Absent for
+    /// backends that run in-process.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    /// Provider-specific run metadata. Kept as free-form JSON so no vendor
+    /// type leaks into the core domain model. Fields that a provider cannot
+    /// measure are simply absent rather than fabricated.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider_metadata: Option<Value>,
 }
 
 impl BackendTelemetry {
@@ -188,7 +206,19 @@ impl BackendTelemetry {
             cost_estimate: 0.0,
             confidence: 0.5,
             notes: Vec::new(),
+            provider: None,
+            provider_metadata: None,
         }
+    }
+
+    pub fn with_provider(mut self, provider: impl Into<String>) -> Self {
+        self.provider = Some(provider.into());
+        self
+    }
+
+    pub fn with_provider_metadata(mut self, metadata: Value) -> Self {
+        self.provider_metadata = Some(metadata);
+        self
     }
 }
 
@@ -200,6 +230,50 @@ pub struct SolverOutput {
     pub score: SolverScore,
     pub rationale: String,
     pub telemetry: BackendTelemetry,
+    /// Normalized combinatorial result for backends that optimize over binary
+    /// decision variables. Plan-shaped backends leave this empty.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub solution: Option<OptimizationSolution>,
+}
+
+/// What a solver backend can accept, so callers can check before submitting.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolverCapabilities {
+    /// Largest number of binary variables the backend will accept, when it
+    /// declares a limit.
+    pub max_variables: Option<usize>,
+    /// Whether the backend optimizes over an explicit binary quadratic model.
+    pub supports_quadratic_models: bool,
+    /// Whether the backend can produce a plan from candidate actions alone.
+    pub supports_plan_output: bool,
+    /// Whether the backend calls a remote service.
+    pub remote: bool,
+    /// Whether the backend needs credentials before it can run.
+    pub requires_credentials: bool,
+}
+
+impl Default for SolverCapabilities {
+    fn default() -> Self {
+        Self {
+            max_variables: None,
+            supports_quadratic_models: false,
+            supports_plan_output: true,
+            remote: false,
+            requires_credentials: false,
+        }
+    }
+}
+
+impl SolverCapabilities {
+    /// Reports why a problem of this size cannot be submitted, if it cannot.
+    pub fn rejection_reason(&self, variables: usize) -> Option<String> {
+        match self.max_variables {
+            Some(limit) if variables > limit => Some(format!(
+                "problem has {variables} variables but this backend accepts at most {limit}"
+            )),
+            _ => None,
+        }
+    }
 }
 
 #[async_trait]
@@ -221,6 +295,77 @@ pub trait SolverBackend: Send + Sync {
     fn kind(&self) -> SolverKind;
     async fn solve(&self, problem: DecisionProblem, context: SolverContext)
         -> Result<SolverOutput>;
+
+    /// What this backend accepts. The default suits in-process planners.
+    fn capabilities(&self) -> SolverCapabilities {
+        SolverCapabilities::default()
+    }
+}
+
+/// Name-keyed lookup of solver backends.
+///
+/// Backends register under their own name and optionally under short aliases,
+/// which is how `--backend dwave-sa` reaches an implementation without the
+/// caller knowing which crate provides it.
+#[derive(Default, Clone)]
+pub struct SolverRegistry {
+    backends: BTreeMap<String, Arc<dyn SolverBackend>>,
+}
+
+impl SolverRegistry {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Registers a backend under its own name.
+    pub fn register(&mut self, backend: Arc<dyn SolverBackend>) -> &mut Self {
+        self.backends.insert(backend.name().to_string(), backend);
+        self
+    }
+
+    /// Registers a backend under an additional short name.
+    pub fn register_as(
+        &mut self,
+        alias: impl Into<String>,
+        backend: Arc<dyn SolverBackend>,
+    ) -> &mut Self {
+        self.backends.insert(alias.into(), backend);
+        self
+    }
+
+    pub fn get(&self, name: &str) -> Option<Arc<dyn SolverBackend>> {
+        self.backends.get(name).cloned()
+    }
+
+    /// Resolves a backend or explains what is available.
+    pub fn require(&self, name: &str) -> Result<Arc<dyn SolverBackend>> {
+        self.get(name).ok_or_else(|| {
+            QuantumClawError::new(format!(
+                "unknown solver backend '{name}'; available backends: {}",
+                self.names().join(", ")
+            ))
+        })
+    }
+
+    pub fn names(&self) -> Vec<String> {
+        self.backends.keys().cloned().collect()
+    }
+
+    pub fn backends(&self) -> Vec<Arc<dyn SolverBackend>> {
+        self.backends.values().cloned().collect()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.backends.is_empty()
+    }
+}
+
+impl std::fmt::Debug for SolverRegistry {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SolverRegistry")
+            .field("backends", &self.names())
+            .finish()
+    }
 }
 
 #[async_trait]

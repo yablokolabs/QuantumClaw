@@ -1,0 +1,22 @@
+[package]
+name = "quantumclaw-brains-router"
+version = "0.1.0"
+description = "Q-Router: the logistics domain brain for QuantumClaw."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quantumclaw-brains = { workspace = true }
+quantumclaw-core = { workspace = true }
+quantumclaw-ir = { workspace = true }
+quantumclaw-optimization = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+quantumclaw-providers-dwave = { workspace = true }
+quantumclaw-optimization = { workspace = true }

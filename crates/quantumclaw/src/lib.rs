@@ -10,6 +10,10 @@
 #![allow(ambiguous_glob_reexports)]
 
 #[doc(hidden)]
+pub mod quantumclaw_brains;
+#[doc(hidden)]
+pub mod quantumclaw_brains_router;
+#[doc(hidden)]
 pub mod quantumclaw_core;
 #[doc(hidden)]
 pub mod quantumclaw_ir;
@@ -18,9 +22,13 @@ pub mod quantumclaw_memory;
 #[doc(hidden)]
 pub mod quantumclaw_observability;
 #[doc(hidden)]
+pub mod quantumclaw_optimization;
+#[doc(hidden)]
 pub mod quantumclaw_planner;
 #[doc(hidden)]
 pub mod quantumclaw_policy;
+#[doc(hidden)]
+pub mod quantumclaw_providers_dwave;
 #[doc(hidden)]
 pub mod quantumclaw_runtime;
 #[doc(hidden)]
@@ -42,6 +50,30 @@ pub mod core {
 /// Backend-neutral decision IR.
 pub mod ir {
     pub use crate::quantumclaw_ir::*;
+}
+
+/// Domain-neutral QUBO/BQM compilation and solution decoding.
+pub mod optimization {
+    pub use crate::quantumclaw_optimization::*;
+}
+
+/// Domain brains: the abstraction and the brains QuantumClaw ships.
+pub mod brains {
+    pub use crate::quantumclaw_brains::*;
+
+    /// Q-Router: the logistics brain.
+    pub mod router {
+        pub use crate::quantumclaw_brains_router::*;
+    }
+}
+
+/// Solver providers.
+pub mod providers {
+    /// D-Wave Ocean backends: local simulated annealing, exhaustive search,
+    /// Leap hybrid, and quantum annealing hardware.
+    pub mod dwave {
+        pub use crate::quantumclaw_providers_dwave::*;
+    }
 }
 
 /// Working, short-term, episodic, semantic, and procedural memory APIs.
@@ -99,6 +131,13 @@ pub mod solvers {
 
 /// Common imports for most QuantumClaw applications.
 pub mod prelude {
+    pub use crate::brains::router::{
+        DeliveryProblem, QRouterBrain, QRouterRequest, QRouterResult, RouterBenchmark, RouterKpis,
+    };
+    pub use crate::brains::{
+        BrainCapabilities, BrainMatch, BrainOperation, BrainRegistry, BrainSolveContext,
+        ErasedBrain, JsonBrain, KpiReport, QuantumBrain, ValidationReport,
+    };
     pub use crate::core::*;
     pub use crate::ir::*;
     pub use crate::memory::*;
@@ -106,10 +145,18 @@ pub mod prelude {
         AuditSink, ExecutionTrace, InMemoryObserver, MetricEvent, PlannerComparisonEvent,
         TraceEvent,
     };
+    pub use crate::optimization::{
+        action_selection_problem, optimization_problem_for, CompiledModel, OptimizationError,
+        QuboCompiler,
+    };
     pub use crate::planner::*;
     pub use crate::policy::{
         AuditEvent, DeterministicPolicyEngine, DomainPolicyPack, HumanConfirmationThreshold,
         Permission, PlanAuditLog, PolicyDecision, RiskLevel,
+    };
+    pub use crate::providers::dwave::{
+        DWaveBridge, DWaveConfig, DWaveExactSolverBackend, DWaveLeapHybridBackend, DWaveQpuBackend,
+        DWaveRunMetadata, DWaveSimulatedAnnealingBackend, LeapConfig, SimulatedAnnealingParams,
     };
     pub use crate::runtime::{
         AgentLifecycle, Channel, InMemorySubagentRegistry, MessageRouter, PromptTemplate,

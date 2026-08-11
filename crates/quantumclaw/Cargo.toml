@@ -12,7 +12,11 @@ anyhow = { workspace = true }
 async-trait = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+tokio = { workspace = true }
 zeroclaw = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
 
 [features]
 default = []

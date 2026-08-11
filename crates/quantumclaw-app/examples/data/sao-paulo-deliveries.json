@@ -1,0 +1,66 @@
+{
+  "problem": {
+    "id": "sao-paulo-morning",
+    "depots": [
+      { "id": "depot-sp", "name": "São Paulo depot", "location": { "lat": -23.55, "lon": -46.63 } }
+    ],
+    "vehicles": [
+      {
+        "id": "truck-1",
+        "depot_id": "depot-sp",
+        "capacity": 12,
+        "cost_per_km": 1.1,
+        "fixed_cost": 40.0,
+        "fuel_l_per_100km": 26.0,
+        "co2_g_per_km": 690.0,
+        "average_speed_kmh": 35.0
+      },
+      {
+        "id": "truck-2",
+        "depot_id": "depot-sp",
+        "capacity": 12,
+        "cost_per_km": 1.1,
+        "fixed_cost": 40.0,
+        "fuel_l_per_100km": 26.0,
+        "co2_g_per_km": 690.0,
+        "average_speed_kmh": 35.0
+      },
+      {
+        "id": "van-1",
+        "depot_id": "depot-sp",
+        "capacity": 8,
+        "cost_per_km": 0.7,
+        "fixed_cost": 15.0,
+        "fuel_l_per_100km": 12.0,
+        "co2_g_per_km": 310.0,
+        "average_speed_kmh": 40.0
+      }
+    ],
+    "deliveries": [
+      { "id": "pinheiros-1", "location": { "lat": -23.561, "lon": -46.692 }, "demand": 4, "service_time_min": 10 },
+      { "id": "pinheiros-2", "location": { "lat": -23.567, "lon": -46.701 }, "demand": 3, "service_time_min": 10 },
+      { "id": "pinheiros-3", "location": { "lat": -23.572, "lon": -46.688 }, "demand": 5, "service_time_min": 10 },
+      { "id": "tatuape-1", "location": { "lat": -23.540, "lon": -46.576 }, "demand": 4, "service_time_min": 10 },
+      { "id": "tatuape-2", "location": { "lat": -23.533, "lon": -46.565 }, "demand": 6, "service_time_min": 10 },
+      { "id": "santana-1", "location": { "lat": -23.502, "lon": -46.625 }, "demand": 3, "service_time_min": 10,
+        "window": { "start_min": 0.0, "end_min": 180.0 } },
+      { "id": "santana-2", "location": { "lat": -23.496, "lon": -46.618 }, "demand": 5, "service_time_min": 10,
+        "window": { "start_min": 0.0, "end_min": 180.0 } }
+    ],
+    "matrix": { "kind": "haversine", "average_speed_kmh": 32.0 },
+    "cost_model": { "fuel_price_per_liter": 1.45, "driver_cost_per_hour": 18.0 },
+    "sla": { "late_penalty_per_minute": 2.0, "breach_after_minutes": 30.0 },
+    "baseline": {
+      "problem_id": "sao-paulo-morning",
+      "routes": [
+        { "vehicle_id": "truck-1", "depot_id": "depot-sp", "stops": ["pinheiros-1", "tatuape-1", "santana-1"] },
+        { "vehicle_id": "truck-2", "depot_id": "depot-sp", "stops": ["pinheiros-2", "tatuape-2", "santana-2"] },
+        { "vehicle_id": "van-1", "depot_id": "depot-sp", "stops": ["pinheiros-3"] }
+      ],
+      "unassigned": []
+    }
+  },
+  "options": {
+    "max_variables_per_subproblem": 40
+  }
+}

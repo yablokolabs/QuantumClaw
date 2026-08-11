@@ -19,9 +19,21 @@ quantumclaw-ir = { workspace = true }
 quantumclaw-solvers-classical = { workspace = true }
 quantumclaw-solvers-qinspired = { workspace = true }
 quantumclaw-solvers-future-qpu = { workspace = true }
+quantumclaw-providers-dwave = { workspace = true }
+quantumclaw-optimization = { workspace = true }
+quantumclaw-brains = { workspace = true }
+quantumclaw-brains-router = { workspace = true }
 quantumclaw-tools = { workspace = true }
 quantumclaw-policy = { workspace = true }
 quantumclaw-skills = { workspace = true }
 quantumclaw-observability = { workspace = true }
 tokio = { workspace = true }
 zeroclaw = { workspace = true }
+
+[[bin]]
+name = "quantumclaw-app"
+path = "src/main.rs"
+
+[[bin]]
+name = "quantumclaw"
+path = "src/bin/quantumclaw.rs"
