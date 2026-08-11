@@ -53,6 +53,10 @@ The publishable crate mirrors internal component APIs into one product, one bran
 - `quantumclaw-solvers-classical`: greedy solver plus classical search/optimization solver stubs
 - `quantumclaw-solvers-qinspired`: quantum-inspired solver stub, QUBO-like and Ising-like placeholder mappings
 - `quantumclaw-solvers-future-qpu`: feature-gated placeholder adapters for future QPU SDK integration
+- `quantumclaw-optimization`: domain-neutral QUBO/BQM compiler, penalty encoding, slack variables, and solution decoding
+- `quantumclaw-providers-dwave`: D-Wave Ocean provider — local classical simulated annealing, exhaustive search, Leap hybrid, and QPU backends behind a Python sidecar
+- `quantumclaw-brains`: `QuantumBrain` abstraction and the registry that routes agent tasks to a domain brain
+- `quantumclaw-brains-router`: Q-Router, the logistics brain (VRP/CVRP/VRPTW modelling, decomposition, route decoding, logistics KPIs, benchmarking)
 - `quantumclaw-tools`: adapters around `zeroclaw::tools::Tool`, policy-controlled registry, calls, schemas, permissions, and tool stubs
 - `quantumclaw-policy`: deterministic policy, permissions, risk levels, human confirmation, auditing, domain policy packs
 - `quantumclaw-skills`: procedural skills, templates, execution records, retrievers, recipes, and learning pipeline
@@ -91,8 +95,14 @@ Rendered from [`docs/diagrams/quantumclaw-architecture.mmd`](docs/diagrams/quant
 4. **Solver layer**
    - classical solvers
    - quantum-inspired solvers
+   - D-Wave Ocean provider: `dwave-sa`, `dwave-exact`, `dwave-hybrid`, `dwave-qpu`
    - future QPU adapters
    - optional CUDA-Q experiments as spike/backend candidates, not core runtime dependencies
+
+5. **Domain brain layer**
+   - `QuantumBrain` abstraction with `can_handle`, `validate`, `plan`, `formulate`, `decompose`, `solve`, `evaluate`, `explain`
+   - Q-Router as the first implementation
+   - brains own domain knowledge; they never own solvers
 
 5. **Execution and policy layer**
    - deterministic validation
@@ -551,3 +561,43 @@ async fn example() -> Result<()> {
 - Validate the CUDA-Q QAOA sidecar spike in a CUDA-Q-ready CPU/GPU environment before adding a production `quantumclaw-solvers-cudaq` crate.
 - Add optional domain policy packs without changing core identity.
 - Add feature-gated QPU SDK adapters when stable vendor APIs justify integration.
+
+## Optimization, D-Wave, and Q-Router
+
+QuantumClaw compiles binary decision problems into a QUBO/BQM and hands them to
+whichever backend is selected by name. D-Wave is one provider among several,
+and no D-Wave type appears in the core domain models.
+
+```
+DecisionProblem / OptimizationProblem
+        ↓  quantumclaw-optimization
+BQM (minimization form, penalty-encoded constraints)
+        ↓  SolverBackend
+classical | dwave-sa | dwave-exact | dwave-hybrid | dwave-qpu
+        ↓
+SolverOutput + OptimizationSolution + provider metadata
+```
+
+`dwave-sa` runs `dwave.samplers.SimulatedAnnealingSampler`: **classical**
+simulated annealing over an Ocean-compatible BQM. It is not a QPU simulator.
+
+### Quick start
+
+```sh
+# Ocean lives behind a Python sidecar, so it never enters a QuantumClaw build.
+pip install "crates/quantumclaw-providers-dwave/python[local]"
+export QUANTUMCLAW_DWAVE_PYTHON=$(which python)
+
+cargo run -p quantumclaw-app --bin quantumclaw -- backends
+cargo run -p quantumclaw-app --bin quantumclaw -- solve problem.json --backend dwave-sa
+cargo run -p quantumclaw-app --bin quantumclaw -- benchmark problem.json \
+    --primary greedy-classical --shadow dwave-sa
+
+# Q-Router, the logistics brain
+cargo run -p quantumclaw-app --bin quantumclaw -- \
+    qrouter benchmark crates/quantumclaw-app/examples/data/sao-paulo-deliveries.json \
+    --backends classical,dwave-sa
+```
+
+Details: [`docs/providers/dwave.md`](docs/providers/dwave.md) and
+[`docs/brains/qrouter.md`](docs/brains/qrouter.md).

@@ -138,6 +138,7 @@ impl SolverBackend for QuantumInspiredSolver {
             score: SolverScore { utility, confidence, cost_estimate: telemetry.cost_estimate, risk },
             rationale: "Quantum-inspired solver stub using hybrid heuristic scoring over backend-neutral IR".into(),
             telemetry,
+            solution: None,
         })
     }
 }

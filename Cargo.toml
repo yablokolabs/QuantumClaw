@@ -4,8 +4,12 @@ members = [
     "crates/quantumclaw-core",
     "crates/quantumclaw-runtime",
     "crates/quantumclaw-memory",
+    "crates/quantumclaw-brains",
+    "crates/quantumclaw-brains-router",
     "crates/quantumclaw-planner",
+    "crates/quantumclaw-providers-dwave",
     "crates/quantumclaw-ir",
+    "crates/quantumclaw-optimization",
     "crates/quantumclaw-solvers-classical",
     "crates/quantumclaw-solvers-qinspired",
     "crates/quantumclaw-solvers-future-qpu",
@@ -28,15 +32,19 @@ anyhow = "1"
 async-trait = "0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "process"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "process", "io-util"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 zeroclaw = { version = "0.1.7", default-features = false }
 
+quantumclaw-brains = { version = "0.1.0", path = "crates/quantumclaw-brains" }
+quantumclaw-brains-router = { version = "0.1.0", path = "crates/quantumclaw-brains-router" }
 quantumclaw-core = { version = "0.1.0", path = "crates/quantumclaw-core" }
 quantumclaw-runtime = { version = "0.1.0", path = "crates/quantumclaw-runtime" }
 quantumclaw-memory = { version = "0.1.0", path = "crates/quantumclaw-memory" }
 quantumclaw-planner = { version = "0.1.0", path = "crates/quantumclaw-planner" }
 quantumclaw-ir = { version = "0.1.0", path = "crates/quantumclaw-ir" }
+quantumclaw-optimization = { version = "0.1.0", path = "crates/quantumclaw-optimization" }
+quantumclaw-providers-dwave = { version = "0.1.0", path = "crates/quantumclaw-providers-dwave" }
 quantumclaw-solvers-classical = { version = "0.1.0", path = "crates/quantumclaw-solvers-classical" }
 quantumclaw-solvers-qinspired = { version = "0.1.0", path = "crates/quantumclaw-solvers-qinspired" }
 quantumclaw-solvers-future-qpu = { version = "0.1.0", path = "crates/quantumclaw-solvers-future-qpu" }

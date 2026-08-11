@@ -2009,6 +2009,7 @@ dependencies = [
  "async-trait",
  "serde",
  "serde_json",
+ "tokio",
  "zeroclaw",
 ]
 
@@ -2017,12 +2018,16 @@ name = "quantumclaw-app"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "quantumclaw-brains",
+ "quantumclaw-brains-router",
  "quantumclaw-core",
  "quantumclaw-ir",
  "quantumclaw-memory",
  "quantumclaw-observability",
+ "quantumclaw-optimization",
  "quantumclaw-planner",
  "quantumclaw-policy",
+ "quantumclaw-providers-dwave",
  "quantumclaw-runtime",
  "quantumclaw-skills",
  "quantumclaw-solvers-classical",
@@ -2055,6 +2060,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "quantumclaw-brains"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "quantumclaw-core",
+ "quantumclaw-ir",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "quantumclaw-brains-router"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "quantumclaw-brains",
+ "quantumclaw-core",
+ "quantumclaw-ir",
+ "quantumclaw-optimization",
+ "quantumclaw-providers-dwave",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "quantumclaw-core"
 version = "0.1.0"
 dependencies = [
@@ -2062,6 +2094,7 @@ dependencies = [
  "quantumclaw-ir",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -2093,6 +2126,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "quantumclaw-optimization"
+version = "0.1.0"
+dependencies = [
+ "quantumclaw-core",
+ "quantumclaw-ir",
+ "serde",
+]
+
+[[package]]
 name = "quantumclaw-planner"
 version = "0.1.0"
 dependencies = [
@@ -2101,6 +2143,7 @@ dependencies = [
  "quantumclaw-ir",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -2113,6 +2156,19 @@ dependencies = [
  "quantumclaw-planner",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "quantumclaw-providers-dwave"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "quantumclaw-core",
+ "quantumclaw-ir",
+ "quantumclaw-optimization",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

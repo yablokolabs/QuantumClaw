@@ -1,0 +1,13 @@
+[package]
+name = "quantumclaw-optimization"
+version = "0.1.0"
+description = "Domain-neutral QUBO/BQM compilation and solution decoding for QuantumClaw decision problems."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+quantumclaw-core = { workspace = true }
+quantumclaw-ir = { workspace = true }

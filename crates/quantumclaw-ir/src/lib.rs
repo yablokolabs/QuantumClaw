@@ -1,3 +1,11 @@
+pub mod optimization;
+
+pub use optimization::{
+    BinaryQuadraticModel, BinaryVariable, ConstraintExpression, ConstraintViolation, LinearTerm,
+    ObjectiveSense, OptimizationConstraint, OptimizationProblem, OptimizationSolution,
+    QuadraticTerm,
+};
+
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -16,6 +24,11 @@ pub struct DecisionProblem {
     pub confidence: ConfidenceEstimate,
     pub rollback: RollbackStrategy,
     pub metadata: ExecutionMetadata,
+    /// Explicit combinatorial model for solvers that optimize over binary
+    /// decision variables. When absent, solvers derive one from the candidate
+    /// actions and dependencies above.
+    #[serde(default)]
+    pub optimization: Option<OptimizationProblem>,
 }
 
 impl DecisionProblem {
@@ -34,7 +47,14 @@ impl DecisionProblem {
             confidence: ConfidenceEstimate::default(),
             rollback: RollbackStrategy::default(),
             metadata: ExecutionMetadata::default(),
+            optimization: None,
         }
+    }
+
+    /// Attach an explicit combinatorial model to this problem.
+    pub fn with_optimization(mut self, optimization: OptimizationProblem) -> Self {
+        self.optimization = Some(optimization);
+        self
     }
 
     pub fn for_task(task: impl Into<String>) -> Self {

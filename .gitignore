@@ -17,3 +17,15 @@ __pycache__/
 *.key
 *.p12
 *.pfx
+
+# Local Python environments for the Ocean bridge
+.venv*
+
+# Git worktrees
+.worktrees/
+
+# Python build artifacts
+*.egg-info/
+build/
+dist/
+.pytest_cache/

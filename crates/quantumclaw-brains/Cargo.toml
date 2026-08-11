@@ -1,0 +1,18 @@
+[package]
+name = "quantumclaw-brains"
+version = "0.1.0"
+description = "Domain brain abstraction and registry for QuantumClaw."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+quantumclaw-core = { workspace = true }
+quantumclaw-ir = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }

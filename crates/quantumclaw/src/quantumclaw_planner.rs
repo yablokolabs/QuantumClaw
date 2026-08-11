@@ -1,10 +1,12 @@
 use crate::quantumclaw_core::{
-    AgentTask, PlanDecoder, ProblemEncoder, Result, SolverBackend, SolverContext, SolverKind,
-    SolverOutput,
+    AgentTask, PlanDecoder, ProblemEncoder, QuantumClawError, Result, SolverBackend, SolverContext,
+    SolverKind, SolverOutput,
 };
+use crate::quantumclaw_ir::optimization::ObjectiveSense;
 use crate::quantumclaw_ir::{DecisionProblem, ExecutionMetadata};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -202,6 +204,11 @@ impl PlannerRationale {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BackendSelectionPolicy {
     pub preferred_kind: Option<SolverKind>,
+    /// Exact backend name to use, such as `dwave-sa`. Takes precedence over
+    /// every kind-based preference, and fails loudly when it is unavailable so
+    /// an explicit request is never silently downgraded.
+    #[serde(default)]
+    pub preferred_backend: Option<String>,
     pub allow_shadow: bool,
     pub max_latency_ms: Option<u64>,
     pub confidence_floor: f64,
@@ -215,6 +222,18 @@ impl BackendSelectionPolicy {
         }
     }
 
+    pub fn prefer_backend(name: impl Into<String>) -> Self {
+        Self {
+            preferred_backend: Some(name.into()),
+            ..Self::default()
+        }
+    }
+
+    pub fn with_preferred_backend(mut self, name: impl Into<String>) -> Self {
+        self.preferred_backend = Some(name.into());
+        self
+    }
+
     pub fn with_shadow(mut self, allow_shadow: bool) -> Self {
         self.allow_shadow = allow_shadow;
         self
@@ -225,6 +244,7 @@ impl Default for BackendSelectionPolicy {
     fn default() -> Self {
         Self {
             preferred_kind: None,
+            preferred_backend: None,
             allow_shadow: false,
             max_latency_ms: Some(30_000),
             confidence_floor: 0.55,
@@ -251,7 +271,118 @@ pub struct ShadowComparison {
     pub shadow_backend_kind: SolverKind,
     pub primary_score: PlanScore,
     pub shadow_score: PlanScore,
+    /// Wall time of the shadow run.
     pub latency_ms: u64,
+    /// Wall time of the primary run.
+    #[serde(default)]
+    pub primary_latency_ms: u64,
+    /// Objective-level comparison, present when both backends returned an
+    /// optimization result.
+    #[serde(default)]
+    pub optimization: Option<OptimizationComparison>,
+}
+
+/// Which solver produced the better result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ComparisonVerdict {
+    Primary,
+    Shadow,
+    Tie,
+    /// The two results cannot be compared, for example because they optimize
+    /// different objectives or neither is feasible.
+    NotComparable,
+}
+
+/// Objective, feasibility, and runtime comparison of two solver results.
+///
+/// This is what a shadow deployment actually needs: not which backend is more
+/// interesting, but whether it produced a feasible answer and how its objective
+/// compares against the solver currently making decisions.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OptimizationComparison {
+    pub sense: ObjectiveSense,
+    pub primary_objective: f64,
+    pub shadow_objective: f64,
+    /// Improvement of the shadow result over the primary, always oriented so
+    /// that a positive number means the shadow did better.
+    pub objective_delta: f64,
+    /// `objective_delta` relative to the primary objective, when that is
+    /// non-zero. This is the optimality gap when the primary is a proven
+    /// optimum.
+    pub relative_gap: Option<f64>,
+    pub primary_feasible: bool,
+    pub shadow_feasible: bool,
+    pub primary_violations: usize,
+    pub shadow_violations: usize,
+    /// In-solver runtime reported by the provider, when it measures one.
+    pub primary_solver_runtime_ms: Option<f64>,
+    pub shadow_solver_runtime_ms: Option<f64>,
+    pub verdict: ComparisonVerdict,
+    /// Domain metadata, for example logistics KPIs supplied by a brain.
+    #[serde(default)]
+    pub kpis: BTreeMap<String, f64>,
+}
+
+impl OptimizationComparison {
+    /// Builds a comparison from two solver outputs.
+    ///
+    /// An infeasible result never wins: a better objective that breaks a hard
+    /// constraint is not a better answer.
+    pub fn between(primary: &SolverOutput, shadow: &SolverOutput) -> Option<Self> {
+        let left = primary.solution.as_ref()?;
+        let right = shadow.solution.as_ref()?;
+
+        let improvement = match left.sense {
+            ObjectiveSense::Minimize => left.objective_value - right.objective_value,
+            ObjectiveSense::Maximize => right.objective_value - left.objective_value,
+        };
+        let relative_gap = if left.objective_value.abs() > f64::EPSILON {
+            Some(improvement / left.objective_value.abs())
+        } else {
+            None
+        };
+
+        let verdict = match (left.feasible, right.feasible) {
+            (true, false) => ComparisonVerdict::Primary,
+            (false, true) => ComparisonVerdict::Shadow,
+            (false, false) => ComparisonVerdict::NotComparable,
+            (true, true) if improvement.abs() <= f64::EPSILON => ComparisonVerdict::Tie,
+            (true, true) if improvement > 0.0 => ComparisonVerdict::Shadow,
+            (true, true) => ComparisonVerdict::Primary,
+        };
+
+        Some(Self {
+            sense: left.sense,
+            primary_objective: left.objective_value,
+            shadow_objective: right.objective_value,
+            objective_delta: improvement,
+            relative_gap,
+            primary_feasible: left.feasible,
+            shadow_feasible: right.feasible,
+            primary_violations: left.violations.len(),
+            shadow_violations: right.violations.len(),
+            primary_solver_runtime_ms: solver_runtime_ms(&primary.telemetry),
+            shadow_solver_runtime_ms: solver_runtime_ms(&shadow.telemetry),
+            verdict,
+            kpis: BTreeMap::new(),
+        })
+    }
+
+    pub fn with_kpi(mut self, name: impl Into<String>, value: f64) -> Self {
+        self.kpis.insert(name.into(), value);
+        self
+    }
+}
+
+/// Providers that measure time spent inside the solver itself report it under
+/// `solver_runtime_ms` in their provider metadata. Wall time already lives in
+/// [`crate::quantumclaw_core::BackendTelemetry::latency_ms`].
+fn solver_runtime_ms(telemetry: &crate::quantumclaw_core::BackendTelemetry) -> Option<f64> {
+    telemetry
+        .provider_metadata
+        .as_ref()?
+        .get("solver_runtime_ms")?
+        .as_f64()
 }
 
 #[derive(Debug, Default, Clone)]
@@ -346,8 +477,11 @@ impl HybridPlanner {
             &problem,
         )?;
         let context = SolverContext::from_task(&request.task);
+        let primary_started = Instant::now();
         let primary_output = primary.solve(problem.clone(), context.clone()).await?;
+        let primary_latency_ms = primary_started.elapsed().as_millis() as u64;
         let primary_telemetry = primary_output.telemetry.clone();
+        let primary_for_comparison = primary_output.clone();
         let mut plan = self
             .decoder
             .decode(primary_output, problem.metadata.clone())
@@ -387,6 +521,11 @@ impl HybridPlanner {
                     primary_score: plan.score.clone(),
                     shadow_score: shadow_plan.score,
                     latency_ms: shadow_started.elapsed().as_millis() as u64,
+                    primary_latency_ms,
+                    optimization: OptimizationComparison::between(
+                        &primary_for_comparison,
+                        &shadow_output,
+                    ),
                 });
             }
         }
@@ -447,6 +586,23 @@ fn select_primary_backend(
 ) -> Result<Arc<dyn SolverBackend>> {
     if backends.is_empty() {
         return Err("planner requires at least one solver backend".into());
+    }
+
+    if let Some(name) = policy.preferred_backend.as_deref() {
+        return backends
+            .iter()
+            .find(|backend| backend.name() == name)
+            .cloned()
+            .ok_or_else(|| {
+                let available = backends
+                    .iter()
+                    .map(|backend| backend.name())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                QuantumClawError::new(format!(
+                    "requested solver backend '{name}' is not available; available backends: {available}"
+                ))
+            });
     }
 
     let preferred = match mode {
