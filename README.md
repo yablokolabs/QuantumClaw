@@ -608,3 +608,6 @@ cargo run -p quantumclaw-app --bin quantumclaw -- \
 
 Details: [`docs/providers/dwave.md`](docs/providers/dwave.md) and
 [`docs/brains/qrouter.md`](docs/brains/qrouter.md).
+
+Known gaps, deferred work, and what was deliberately not built are recorded in
+[`ROADMAP.md`](ROADMAP.md).
