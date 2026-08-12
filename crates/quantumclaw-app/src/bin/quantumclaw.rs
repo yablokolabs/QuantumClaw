@@ -40,7 +40,7 @@ COMMANDS:
         Show which domain brain would handle an agent task.
 
     qrouter optimize <delivery.json> [--backend NAME] [--decomposition NAME]
-    qrouter benchmark <delivery.json> [--backends a,b,c]
+    qrouter benchmark <delivery.json> [--backends a,b,c] [--repeat N] [--seed S]
     qrouter validate <delivery.json>
     qrouter explain <delivery.json> [--backend NAME]
         Run the Q-Router logistics brain.
@@ -48,6 +48,11 @@ COMMANDS:
 OPTIONS:
     --backend NAME     Solver backend, for example greedy-classical, dwave-sa,
                        dwave-exact, dwave-hybrid, dwave-qpu.
+    --repeat N         Runs per candidate when benchmarking (default 5).
+                       Samplers are stochastic; one run is a draw, not a
+                       measurement. Candidates are ranked on median objective.
+    --seed S           Base seed for those runs (default 1). The same seed
+                       reproduces the same report.
     --pretty           Pretty-print JSON output (default).
     --compact          Emit one-line JSON, for piping into other tools.
 
@@ -241,7 +246,25 @@ async fn qrouter(arguments: &[String]) -> Result<()> {
                     candidates
                 }
             };
+            let repetitions = options
+                .value("--repeat")
+                .map(|value| value.parse::<usize>())
+                .transpose()
+                .map_err(|error| {
+                    QuantumClawError::new(format!("--repeat must be a number: {error}"))
+                })?
+                .unwrap_or(5);
+            let seed = options
+                .value("--seed")
+                .map(|value| value.parse::<u64>())
+                .transpose()
+                .map_err(|error| {
+                    QuantumClawError::new(format!("--seed must be a number: {error}"))
+                })?
+                .unwrap_or(1);
             let report = RouterBenchmark::new(brain)
+                .with_repetitions(repetitions)
+                .with_seed(seed)
                 .run(request, &backends, context)
                 .await?;
             emit(&options, &report)

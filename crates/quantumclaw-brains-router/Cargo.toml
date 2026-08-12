@@ -18,5 +18,6 @@ quantumclaw-optimization = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
+async-trait = { workspace = true }
 quantumclaw-providers-dwave = { workspace = true }
 quantumclaw-optimization = { workspace = true }

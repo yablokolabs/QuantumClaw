@@ -44,6 +44,13 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// Backend name that forces the brain's own classical path.
+///
+/// Without this, "no backend requested" means "let the routing policy decide",
+/// which will happily pick a sampler — so a benchmark row labelled classical
+/// would not be classical at all.
+pub const BACKEND_CLASSICAL: &str = "classical";
+
 /// Vocabulary that marks a task as belonging to this brain.
 const DOMAIN_KEYWORDS: &[&str] = &[
     "delivery",
@@ -75,6 +82,9 @@ pub struct RouterOptions {
     /// Whether route sequencing is also offered to a sampler. Off by default.
     #[serde(default)]
     pub sequencing: SequencingPolicy,
+    /// Seed handed to stochastic samplers, making a run reproducible.
+    #[serde(default)]
+    pub sampler_seed: Option<u64>,
 }
 
 fn default_max_variables() -> usize {
@@ -88,6 +98,7 @@ impl Default for RouterOptions {
             decomposition: None,
             max_variables_per_subproblem: default_max_variables(),
             sequencing: SequencingPolicy::default(),
+            sampler_seed: None,
         }
     }
 }
@@ -115,6 +126,11 @@ impl QRouterRequest {
 
     pub fn with_decomposition(mut self, strategy: impl Into<String>) -> Self {
         self.options.decomposition = Some(strategy.into());
+        self
+    }
+
+    pub fn with_sampler_seed(mut self, seed: u64) -> Self {
+        self.options.sampler_seed = Some(seed);
         self
     }
 }
@@ -233,9 +249,15 @@ impl QRouterBrain {
             .backend
             .clone()
             .or_else(|| context.requested_backend.clone());
-        let decision = match &explicit {
+        let decision = match explicit.as_deref() {
+            Some(BACKEND_CLASSICAL) => {
+                crate::quantumclaw_brains_router::routing_policy::RoutingDecision {
+                    backend: None,
+                    reason: "the caller asked for the classical path explicitly".into(),
+                }
+            }
             Some(name) => crate::quantumclaw_brains_router::routing_policy::RoutingDecision {
-                backend: Some(name.clone()),
+                backend: Some(name.to_string()),
                 reason: format!("the caller requested '{name}'"),
             },
             None => self
@@ -288,8 +310,10 @@ impl QRouterBrain {
             }
         };
 
-        let decision_problem =
-            DecisionProblem::new(subproblem.id.clone()).with_optimization(model.clone());
+        let decision_problem = seeded_problem(
+            DecisionProblem::new(subproblem.id.clone()).with_optimization(model.clone()),
+            request.options.sampler_seed,
+        );
         let solver_context = SolverContext::from_task(
             context
                 .task
@@ -368,7 +392,8 @@ impl QRouterBrain {
             .clone()
             .or_else(|| request.options.backend.clone())
             .or_else(|| context.requested_backend.clone())
-            .or_else(|| self.routing_policy.preferred_backends.first().cloned());
+            .or_else(|| self.routing_policy.preferred_backends.first().cloned())
+            .filter(|name| name != BACKEND_CLASSICAL);
 
         for route in &mut solution.routes {
             if !policy.accepts(route.stops.len()) {
@@ -404,8 +429,11 @@ impl QRouterBrain {
             };
 
             report.backend = backend_name.clone();
-            let decision_problem = DecisionProblem::new(format!("sequence-{}", route.vehicle_id))
-                .with_optimization(model.clone());
+            let decision_problem = seeded_problem(
+                DecisionProblem::new(format!("sequence-{}", route.vehicle_id))
+                    .with_optimization(model.clone()),
+                request.options.sampler_seed,
+            );
             let solver_context = SolverContext::from_task(
                 context
                     .task
@@ -766,6 +794,17 @@ impl QuantumBrain for QRouterBrain {
 
         Ok(explanation)
     }
+}
+
+/// Attaches a sampler seed so a stochastic backend can be reproduced.
+fn seeded_problem(mut problem: DecisionProblem, seed: Option<u64>) -> DecisionProblem {
+    if let Some(seed) = seed {
+        problem.metadata.data.insert(
+            crate::quantumclaw_core::hints::SAMPLER_SEED.into(),
+            seed.to_string(),
+        );
+    }
+    problem
 }
 
 /// Subproblem classes this brain produces.

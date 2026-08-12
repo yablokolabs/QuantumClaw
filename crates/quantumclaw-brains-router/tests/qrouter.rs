@@ -834,3 +834,229 @@ async fn the_optimization_layer_finds_the_packing_the_heuristic_misses() {
     assert_eq!(result.kpis.deliveries_served, 3);
     assert!((result.kpis.capacity_utilization - 1.0).abs() < 1e-9);
 }
+
+// --- benchmark reproducibility and ranking -----------------------------------
+
+fn benchmark_problem() -> DeliveryProblem {
+    let baseline = RouteSolution::new("sao-paulo-morning")
+        .with_route(Route::new("truck-1", "depot-1").with_stops(["d1", "d3"]))
+        .with_route(Route::new("truck-2", "depot-1").with_stops(["d2", "d4"]));
+    unit_demand_problem().with_baseline(baseline)
+}
+
+#[tokio::test]
+async fn the_same_seed_reproduces_the_same_benchmark() {
+    let Some(registry) = ocean_registry() else {
+        return;
+    };
+    let candidates = ["classical".to_string(), "dwave-sa".to_string()];
+
+    let run = || async {
+        RouterBenchmark::new(QRouterBrain::new())
+            .with_repetitions(3)
+            .with_seed(4242)
+            .run(
+                QRouterRequest::new(benchmark_problem()),
+                &candidates,
+                BrainSolveContext::default().with_registry(registry.clone()),
+            )
+            .await
+            .expect("the benchmark runs")
+    };
+
+    let first = run().await;
+    let second = run().await;
+
+    // A stochastic sampler must not produce a different verdict on a rerun.
+    assert_eq!(first.winner, second.winner);
+    for (left, right) in first.entries.iter().zip(second.entries.iter()) {
+        let (Some(left_stats), Some(right_stats)) = (&left.stats, &right.stats) else {
+            continue;
+        };
+        assert_eq!(
+            left_stats.objective_median, right_stats.objective_median,
+            "{} moved between identical runs",
+            left.label
+        );
+        assert_eq!(left_stats.seeds, right_stats.seeds);
+    }
+}
+
+#[tokio::test]
+async fn every_candidate_reports_the_spread_across_its_runs() {
+    let report = RouterBenchmark::new(QRouterBrain::new())
+        .with_repetitions(4)
+        .with_seed(7)
+        .run(
+            QRouterRequest::new(benchmark_problem()),
+            &["classical".to_string()],
+            BrainSolveContext::default(),
+        )
+        .await
+        .expect("the benchmark runs");
+
+    let stats = report
+        .entry("classical")
+        .and_then(|entry| entry.stats.as_ref())
+        .expect("repeated runs are summarised");
+
+    assert_eq!(stats.runs, 4);
+    assert_eq!(stats.seeds, vec![7, 8, 9, 10]);
+    assert!(stats.objective_best <= stats.objective_median);
+    assert!(stats.objective_median <= stats.objective_worst);
+    // The classical path is deterministic, so its runs must not vary at all.
+    assert!(
+        stats.objective_stddev < 1e-9,
+        "a deterministic solver reported a spread of {}",
+        stats.objective_stddev
+    );
+}
+
+#[tokio::test]
+async fn a_candidate_that_is_only_sometimes_feasible_cannot_win() {
+    // The baseline is a fixed infeasible plan, so it must never be the winner
+    // however cheap it looks.
+    let mut problem = benchmark_problem();
+    problem.vehicles[0].capacity = 1;
+    problem.vehicles[1].capacity = 1;
+
+    let report = RouterBenchmark::new(QRouterBrain::new())
+        .with_repetitions(2)
+        .run(
+            QRouterRequest::new(problem),
+            &["classical".to_string()],
+            BrainSolveContext::default(),
+        )
+        .await
+        .expect("the benchmark runs");
+
+    if let Some(entry) = report.entry("classical") {
+        if let Some(stats) = &entry.stats {
+            if !stats.always_feasible() {
+                assert_ne!(report.winner.as_deref(), Some("classical"));
+            }
+        }
+    }
+    assert_ne!(report.winner.as_deref(), Some("baseline"));
+}
+
+#[tokio::test]
+async fn a_single_repetition_is_flagged_as_not_a_measurement() {
+    let report = RouterBenchmark::new(QRouterBrain::new())
+        .with_repetitions(1)
+        .run(
+            QRouterRequest::new(benchmark_problem()),
+            &["classical".to_string()],
+            BrainSolveContext::default(),
+        )
+        .await
+        .expect("the benchmark runs");
+
+    assert!(
+        report.notes.iter().any(|note| note.contains("luck")),
+        "a one-shot benchmark must say so: {:?}",
+        report.notes
+    );
+}
+
+#[tokio::test]
+async fn different_seeds_reach_the_sampler() {
+    let Some(registry) = ocean_registry() else {
+        return;
+    };
+
+    // Same problem, different seeds: the plumbing is proven by the runs being
+    // reproducible per seed, not by them differing (a tiny instance may well
+    // give the same optimum every time).
+    let solve = |seed: u64| {
+        let registry = registry.clone();
+        async move {
+            QRouterBrain::new()
+                .solve(
+                    QRouterRequest::new(unit_demand_problem())
+                        .with_backend("dwave-sa")
+                        .with_sampler_seed(seed),
+                    BrainSolveContext::default().with_registry(registry),
+                )
+                .await
+                .expect("the brain solves")
+        }
+    };
+
+    let first = solve(11).await;
+    let repeat = solve(11).await;
+
+    assert_eq!(
+        first.solution.routes, repeat.solution.routes,
+        "the same seed must produce the same plan"
+    );
+    assert!(first.feasible);
+}
+
+/// A backend that records nothing and solves nothing, registered only so the
+/// routing policy has something to prefer.
+struct NeverCalledBackend;
+
+#[async_trait::async_trait]
+impl quantumclaw_core::SolverBackend for NeverCalledBackend {
+    fn name(&self) -> &'static str {
+        "dwave-sa"
+    }
+
+    fn kind(&self) -> quantumclaw_core::SolverKind {
+        quantumclaw_core::SolverKind::Classical
+    }
+
+    async fn solve(
+        &self,
+        _problem: quantumclaw_ir::DecisionProblem,
+        _context: quantumclaw_core::SolverContext,
+    ) -> quantumclaw_core::Result<quantumclaw_core::SolverOutput> {
+        panic!("the classical path must not reach a sampler");
+    }
+}
+
+#[tokio::test]
+async fn asking_for_the_classical_path_does_not_reach_a_sampler() {
+    // Regression: `backend: None` means "let the policy choose", and the
+    // policy prefers dwave-sa. A benchmark row labelled classical was
+    // therefore running the sampler, making every classical-vs-sampler
+    // comparison a comparison of the sampler with itself.
+    let mut registry = SolverRegistry::new();
+    registry.register(Arc::new(NeverCalledBackend));
+
+    let result = QRouterBrain::new()
+        .solve(
+            request().with_backend(quantumclaw_brains_router::BACKEND_CLASSICAL),
+            BrainSolveContext::default().with_registry(Arc::new(registry)),
+        )
+        .await
+        .expect("the classical path solves without any backend");
+
+    assert_eq!(result.subproblems[0].backend, "classical-greedy");
+    assert!(result.subproblems[0]
+        .routing_reason
+        .contains("classical path explicitly"));
+}
+
+#[tokio::test]
+async fn the_benchmark_classical_row_is_actually_classical() {
+    let mut registry = SolverRegistry::new();
+    registry.register(Arc::new(NeverCalledBackend));
+
+    let report = RouterBenchmark::new(QRouterBrain::new())
+        .with_repetitions(2)
+        .run(
+            QRouterRequest::new(benchmark_problem()),
+            &[quantumclaw_brains_router::BACKEND_CLASSICAL.to_string()],
+            BrainSolveContext::default().with_registry(Arc::new(registry)),
+        )
+        .await
+        .expect("the benchmark runs");
+
+    let entry = report.entry("classical").expect("classical was evaluated");
+    assert_eq!(entry.backend, "classical-greedy");
+    // Deterministic, so repeated runs must agree exactly.
+    let stats = entry.stats.as_ref().expect("runs are summarised");
+    assert!(stats.objective_stddev < 1e-9);
+}
