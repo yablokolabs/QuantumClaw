@@ -5,6 +5,16 @@ All notable changes to the published `quantumclaw` crate.
 This project follows [Semantic Versioning](https://semver.org/). While the crate
 is below `1.0.0`, breaking changes bump the minor version.
 
+## [0.2.2] - 2026-08-12
+
+### Added
+
+- The MIT licence text now ships inside the published package. Every manifest
+  already declared MIT, but the file itself was missing, so the crate on
+  crates.io advertised a licence its consumers could not read.
+
+No API or behaviour changes. Upgrading from 0.2.1 needs no code edits.
+
 ## [0.2.1] - 2026-08-12
 
 ### Changed
