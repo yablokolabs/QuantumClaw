@@ -32,6 +32,7 @@ pub mod kpis;
 pub mod models;
 pub mod network;
 pub mod routing_policy;
+pub mod sequencing;
 pub mod tools;
 pub mod vrp;
 
@@ -50,6 +51,9 @@ pub use models::{
 };
 pub use network::Network;
 pub use routing_policy::{BenchmarkLedger, LedgerRecord, RoutingDecision, SolverRoutingPolicy};
+pub use sequencing::{
+    decode_sequence, tsp_problem, SequencingChoice, SequencingPolicy, SequencingReport,
+};
 pub use tools::{
     QRouterToolContext, TOOL_BENCHMARK, TOOL_COMPARE_SOLVERS, TOOL_OPTIMIZE, TOOL_VALIDATE,
 };

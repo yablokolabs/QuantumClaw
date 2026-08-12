@@ -88,10 +88,10 @@ combinatorial choice with quadratic structure — the interaction term prices tw
 stops carried by the same vehicle by the distance between them, which is what
 makes clustering emerge from the objective rather than from a heuristic.
 
-**Route sequencing stays classical** (nearest neighbour, 2-opt, or-opt). A
-permutation-encoded TSP QUBO needs `n²` variables and heavy penalty tuning to
-compete with heuristics that solve small tours essentially exactly. Sending it
-to an annealer would be theatre.
+**Route sequencing is classical by default** (nearest neighbour, 2-opt,
+or-opt). A permutation-encoded TSP QUBO lane exists and is opt-in — see
+[Sequencing: measured, not assumed](#sequencing-measured-not-assumed) for the
+numbers that justify the default.
 
 `SolverRoutingPolicy` then decides per subproblem:
 
@@ -106,6 +106,75 @@ to an annealer would be theatre.
 
 The ledger is in-memory with `to_json`/`from_json`, so persistence is the
 caller's decision.
+
+## Sequencing: measured, not assumed
+
+A TSP QUBO lane is available for route sequencing, off by default. It uses the
+standard position encoding — `x[stop][position]`, `n²` binaries, one
+`ExactlyOne` per stop and per position, distances as quadratic terms between
+consecutive positions.
+
+```rust
+request.options.sequencing = SequencingPolicy::default()
+    .enabled()
+    .with_max_stops(6)
+    .with_backend("dwave-sa");
+```
+
+Three safeguards apply. It is opt-in; a size guard refuses routes above
+`max_stops` (default 8, because `n²` grows fast); and a sampled tour replaces
+the classical one **only if it is strictly shorter and decodes to a valid
+permutation**. Invalid samples — two stops in one position, a stop left out —
+are rejected rather than turned into a route. Enabling the lane can cost
+runtime; it cannot cost route quality.
+
+### What it actually does
+
+240 seeded instances, both methods scored against the exact optimum found by
+enumerating every permutation. Reproduce with:
+
+```sh
+QUANTUMCLAW_DWAVE_PYTHON=… cargo run -p quantumclaw-app --release \
+    --example sequencing_benchmark
+```
+
+At the default 100 reads:
+
+| stops | vars | classical optimal | QUBO optimal | classical excess | QUBO excess | classical | QUBO |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 3 | 9 | 20/20 | 20/20 | 0.00% | 0.00% | 0.01 ms | 218 ms |
+| 4 | 16 | 20/20 | 20/20 | 0.00% | 0.00% | 0.01 ms | 210 ms |
+| 5 | 25 | 19/20 | 16/20 | 0.00% | 0.94% | 0.01 ms | 216 ms |
+| 6 | 36 | 18/20 | 6/20 | 0.04% | 3.00% | 0.02 ms | 222 ms |
+| 7 | 49 | 17/20 | 1/20 | 0.19% | 10.85% | 0.03 ms | 236 ms |
+| 8 | 64 | 16/20 | 0/20 | 0.26% | 17.35% | 0.05 ms | 248 ms |
+
+At 2000 reads the picture improves but does not reverse:
+
+| stops | classical optimal | QUBO optimal | QUBO excess | head to head |
+| --- | --- | --- | --- | --- |
+| 5 | 19/20 | **20/20** | 0.00% | QUBO shorter once |
+| 6 | 18/20 | **20/20** | 0.00% | QUBO shorter twice |
+| 7 | 17/20 | 8/20 | 1.83% | classical shorter 12× |
+| 8 | 16/20 | 4/20 | 3.89% | classical shorter 15× |
+
+Reading these honestly:
+
+- **The encoding is correct.** Zero invalid tours in 240 runs, and with enough
+  reads the QUBO finds the exact optimum on every 5- and 6-stop instance,
+  beating classical outright three times.
+- **It degrades with size faster than effort compensates.** At 8 stops,
+  20× the sampling effort moves it from 0/20 to 4/20.
+- **Classical is not perfect either** (16/20 at 8 stops) but its misses cost
+  0.26% while the QUBO's cost 3.89%.
+- **The cost gap is four orders of magnitude**, and process startup is only
+  part of it.
+
+So: classical stays the default. The QUBO lane is competitive at 5–6 stops
+with generous `num_reads`, and is worth enabling as a second opinion when
+local search is suspected of sticking in a bad optimum — not as a routine
+setting, and not because it is quantum. `dwave-sa` is classical simulated
+annealing either way.
 
 ## Using it
 

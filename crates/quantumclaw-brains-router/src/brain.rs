@@ -27,6 +27,9 @@ use crate::kpis::{self, RouterKpis};
 use crate::models::{DeliveryProblem, RouteSolution};
 use crate::network::Network;
 use crate::routing_policy::{LedgerRecord, SolverRoutingPolicy};
+use crate::sequencing::{
+    decode_sequence, tsp_problem, SequencingChoice, SequencingPolicy, SequencingReport,
+};
 use async_trait::async_trait;
 use quantumclaw_brains::{
     BrainCapabilities, BrainMatch, BrainPlan, BrainSolveContext, Decomposition, Explanation,
@@ -69,6 +72,9 @@ pub struct RouterOptions {
     /// Largest binary model a subproblem may produce before it is split again.
     #[serde(default = "default_max_variables")]
     pub max_variables_per_subproblem: usize,
+    /// Whether route sequencing is also offered to a sampler. Off by default.
+    #[serde(default)]
+    pub sequencing: SequencingPolicy,
 }
 
 fn default_max_variables() -> usize {
@@ -81,6 +87,7 @@ impl Default for RouterOptions {
             backend: None,
             decomposition: None,
             max_variables_per_subproblem: default_max_variables(),
+            sequencing: SequencingPolicy::default(),
         }
     }
 }
@@ -142,6 +149,10 @@ pub struct QRouterResult {
     pub kpis: RouterKpis,
     pub decomposition: Decomposition,
     pub subproblems: Vec<SubproblemReport>,
+    /// One entry per route considered for QUBO sequencing. Empty when the
+    /// sequencing lane is off, which is the default.
+    #[serde(default)]
+    pub sequencing: Vec<SequencingReport>,
     pub violations: Vec<RouterViolation>,
     pub feasible: bool,
     pub runtime_ms: u64,
@@ -333,6 +344,120 @@ impl QRouterBrain {
                 Ok((assignment, report))
             }
         }
+    }
+
+    /// Re-sequences routes with a sampler, keeping whichever tour is shorter.
+    ///
+    /// A sampler is free to return a broken or worse tour; neither can reach
+    /// the shipped plan. The classical route is the floor, always.
+    async fn sequence_with_sampler(
+        &self,
+        request: &QRouterRequest,
+        network: &Network,
+        solution: &mut RouteSolution,
+        context: &BrainSolveContext,
+    ) -> Vec<SequencingReport> {
+        let policy = &request.options.sequencing;
+        let mut reports = Vec::new();
+        if !policy.enabled {
+            return reports;
+        }
+
+        let backend_name = policy
+            .backend
+            .clone()
+            .or_else(|| request.options.backend.clone())
+            .or_else(|| context.requested_backend.clone())
+            .or_else(|| self.routing_policy.preferred_backends.first().cloned());
+
+        for route in &mut solution.routes {
+            if !policy.accepts(route.stops.len()) {
+                continue;
+            }
+            let classical_distance = network.route_distance_km(&route.depot_id, &route.stops);
+            let mut report = SequencingReport {
+                vehicle_id: route.vehicle_id.clone(),
+                stops: route.stops.len(),
+                variables: route.stops.len() * route.stops.len(),
+                backend: "classical".into(),
+                classical_distance_km: classical_distance,
+                qubo_distance_km: None,
+                chosen: SequencingChoice::Classical,
+                reason: String::new(),
+                solver_runtime_ms: None,
+            };
+
+            let Some(backend_name) = backend_name.clone() else {
+                report.reason = "no sampling backend is available for sequencing".into();
+                reports.push(report);
+                continue;
+            };
+            let Ok(backend) = context.registry.require(&backend_name) else {
+                report.reason = format!("backend '{backend_name}' is not registered");
+                reports.push(report);
+                continue;
+            };
+            let Ok(model) = tsp_problem(network, &route.depot_id, &route.stops) else {
+                report.reason = "the route is too short to sequence".into();
+                reports.push(report);
+                continue;
+            };
+
+            report.backend = backend_name.clone();
+            let decision_problem = DecisionProblem::new(format!("sequence-{}", route.vehicle_id))
+                .with_optimization(model.clone());
+            let solver_context = SolverContext::from_task(
+                context
+                    .task
+                    .as_ref()
+                    .unwrap_or(&AgentTask::new("sequence a vehicle route")),
+            );
+
+            match backend.solve(decision_problem, solver_context).await {
+                Ok(output) => {
+                    report.solver_runtime_ms = output
+                        .telemetry
+                        .provider_metadata
+                        .as_ref()
+                        .and_then(|value| value.get("solver_runtime_ms"))
+                        .and_then(|value| value.as_f64());
+
+                    match output
+                        .solution
+                        .as_ref()
+                        .and_then(|solution| decode_sequence(solution, &model))
+                    {
+                        Some(sequence) => {
+                            let distance = network.route_distance_km(&route.depot_id, &sequence);
+                            report.qubo_distance_km = Some(distance);
+                            if distance + 1e-9 < classical_distance {
+                                report.chosen = SequencingChoice::Qubo;
+                                report.reason = format!(
+                                    "sampled tour is shorter: {distance:.3} km against {classical_distance:.3} km"
+                                );
+                                route.stops = sequence;
+                            } else {
+                                report.reason = format!(
+                                    "classical tour is no worse: {classical_distance:.3} km against {distance:.3} km"
+                                );
+                            }
+                        }
+                        None => {
+                            report.reason =
+                                "the sample was not a valid tour, so the classical route stands"
+                                    .into();
+                        }
+                    }
+                }
+                Err(error) => {
+                    report.reason = format!("backend '{backend_name}' failed: {error}");
+                }
+            }
+
+            reports.push(report);
+        }
+
+        reports
     }
 
     /// Records how each subproblem went, so later runs can route empirically.
@@ -556,7 +681,13 @@ impl QuantumBrain for QRouterBrain {
             .map(|vehicle| vehicle.id.clone())
             .collect();
         let (assignment, unassigned) = repair(&input.problem, &network, &all_vehicles, assignment);
-        let solution = build_solution(&input.problem, &network, &assignment, unassigned);
+        let mut solution = build_solution(&input.problem, &network, &assignment, unassigned);
+
+        // Optional: let a sampler try to beat the classical tour. It can only
+        // replace a route by producing a strictly shorter valid one.
+        let sequencing = self
+            .sequence_with_sampler(&input, &network, &mut solution, &context)
+            .await;
 
         let violations = solution_violations(&input.problem, &network, &solution);
         let runtime_ms = started.elapsed().as_millis() as u64;
@@ -580,6 +711,7 @@ impl QuantumBrain for QRouterBrain {
             kpis,
             decomposition: summary,
             subproblems: reports,
+            sequencing,
             violations,
             runtime_ms,
         })
