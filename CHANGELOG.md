@@ -5,7 +5,7 @@ All notable changes to the published `quantumclaw` crate.
 This project follows [Semantic Versioning](https://semver.org/). While the crate
 is below `1.0.0`, breaking changes bump the minor version.
 
-## [Unreleased]
+## [0.3.0] - 2026-08-12
 
 ### Added
 
