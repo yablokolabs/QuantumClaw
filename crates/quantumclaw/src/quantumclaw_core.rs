@@ -43,6 +43,15 @@ impl From<String> for QuantumClawError {
 
 pub type Result<T> = std::result::Result<T, QuantumClawError>;
 
+/// Well-known keys a caller can put in `DecisionProblem.metadata.data` to
+/// steer a solver without changing the `SolverBackend` contract.
+pub mod hints {
+    /// Seed for stochastic samplers. Backends that support seeding use this
+    /// when their own configuration does not already set one, which is what
+    /// makes a benchmark repeatable.
+    pub const SAMPLER_SEED: &str = "sampler.seed";
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SolverKind {
     /// Runs entirely on classical hardware. Simulated annealing and exhaustive

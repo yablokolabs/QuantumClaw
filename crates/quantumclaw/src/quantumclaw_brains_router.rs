@@ -37,7 +37,9 @@ pub mod tools;
 pub mod vrp;
 
 pub use benchmark::{BenchmarkEntry, RouterBenchmark, RouterBenchmarkReport};
-pub use brain::{QRouterBrain, QRouterRequest, QRouterResult, RouterOptions, SubproblemReport};
+pub use brain::{
+    QRouterBrain, QRouterRequest, QRouterResult, RouterOptions, SubproblemReport, BACKEND_CLASSICAL,
+};
 pub use compiler::{assignment_problem, AssignmentWeights};
 pub use constraints::{RouteEvaluation, RouterViolation, ViolationKind};
 pub use decomposition::{

@@ -216,21 +216,46 @@ SLA violation minutes · SLA breaches · estimated fuel · estimated CO2 ·
 estimated operating cost · objective value · feasibility · optimization runtime
 · solver runtime
 
+### Runs, not draws
+
+Samplers are stochastic: one run is a draw from a distribution, not a
+measurement. Every candidate is run `--repeat` times (default 5) with seeds
+derived from `--seed`, and the report carries best, median, worst, mean and
+standard deviation. The same seed reproduces the same report exactly.
+
+Candidates are ranked on **how often they were feasible first, then on median
+objective**. Ranking on the best run would reward luck; ignoring feasibility
+would reward plans that strand deliveries. When the winner was not feasible on
+every run, the report says so rather than presenting it as simply best.
+
+Ask for the classical path by name — `classical`. Leaving the backend unset
+means "let the routing policy decide", and the policy prefers a sampler, so an
+unset backend is not a classical baseline.
+
 Only a **feasible** plan can win a benchmark. A cheaper plan that strands a
 delivery or overloads a truck is not a cheaper plan.
 
 Example output on the bundled São Paulo instance:
 
 ```
-baseline     dist=78.0km cost=267.28 vehicles=3 co2=48.9kg feasible=false
-classical    dist=67.9km cost=241.38 vehicles=3 co2=38.6kg feasible=true   saves 10.0 km
-dwave-sa     dist=67.9km cost=241.38 vehicles=3 co2=38.6kg feasible=true   saves 10.0 km
-winner: classical
+baseline   objective=267.28                       feasible=false  (fixed plan)
+classical  median=234.49  sd= 0.00  feasible=0/5
+dwave-sa   median=226.39  sd=10.67  feasible=4/5
+winner: dwave-sa
+note: the winner 'dwave-sa' was feasible on only 4 of 5 runs;
+      treat it as unreliable rather than best
 ```
 
-The customer's own plan is infeasible here (it overloads a truck), both
-optimized lanes agree, and neither quantum lane is better. That is a real
-result, and the architecture reports it rather than hiding it.
+Three real findings in one table. The customer's own plan is infeasible — it
+overloads a truck. The classical heuristic is perfectly consistent
+(`sd=0.00`) and never finds a servable plan on this instance, which is the
+bin-packing limitation described below. And `dwave-sa` finds a better plan
+most of the time but not every time, so the report refuses to call it simply
+"best".
+
+None of that is a quantum result: `dwave-sa` is classical simulated annealing.
+What it shows is a QUBO formulation succeeding where a greedy heuristic gets
+stuck, at the cost of consistency.
 
 ## Enterprise workflow this supports
 

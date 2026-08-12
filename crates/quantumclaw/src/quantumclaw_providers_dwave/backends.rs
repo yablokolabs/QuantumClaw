@@ -5,7 +5,7 @@
 //! choice rather than a code change.
 
 use crate::quantumclaw_core::{
-    Result as CoreResult, SolverBackend, SolverCapabilities, SolverContext, SolverKind,
+    hints, Result as CoreResult, SolverBackend, SolverCapabilities, SolverContext, SolverKind,
     SolverOutput,
 };
 use crate::quantumclaw_ir::DecisionProblem;
@@ -28,6 +28,15 @@ pub const NAME_EXACT: &str = "dwave-exact";
 pub const NAME_HYBRID: &str = "dwave-hybrid";
 /// Registry name of the quantum annealing backend.
 pub const NAME_QPU: &str = "dwave-qpu";
+
+/// Reads a per-solve sampler seed from the problem metadata.
+fn seed_hint(problem: &DecisionProblem) -> Option<u64> {
+    problem
+        .metadata
+        .data
+        .get(hints::SAMPLER_SEED)
+        .and_then(|value| value.parse().ok())
+}
 
 /// Compiles a decision problem into the QUBO the bridge will sample.
 fn compile(problem: &DecisionProblem, compiler: &QuboCompiler) -> Result<CompiledModel> {
@@ -85,6 +94,9 @@ impl DWaveSimulatedAnnealingBackend {
     }
 
     async fn run(&self, problem: DecisionProblem) -> Result<SolverOutput> {
+        // An explicitly configured seed wins; otherwise the caller can supply
+        // one per solve, which is how a benchmark makes runs reproducible.
+        let seed = self.params.seed.or_else(|| seed_hint(&problem));
         let model = compile(&problem, &self.compiler)?;
         let request = BridgeRequest::new(
             BridgeBackend::SimulatedAnnealing,
@@ -93,7 +105,7 @@ impl DWaveSimulatedAnnealingBackend {
         )
         .with_parameter("num_reads", self.params.num_reads)
         .with_optional_parameter("num_sweeps", self.params.num_sweeps)
-        .with_optional_parameter("seed", self.params.seed)
+        .with_optional_parameter("seed", seed)
         .with_optional_parameter(
             "beta_range",
             self.params

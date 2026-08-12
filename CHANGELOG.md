@@ -16,10 +16,22 @@ is below `1.0.0`, breaking changes bump the minor version.
 - `sequencing_benchmark` example, which scores both methods against the exact
   optimum by enumerating permutations.
 
+### Fixed
+
+- Benchmark candidates are now run repeatedly with derived seeds and ranked on
+  feasibility rate then median objective, instead of once and ranked on a
+  single draw. `--repeat` and `--seed` control it, and the same seed
+  reproduces the same report.
+- A benchmark row labelled `classical` was not classical. Leaving the backend
+  unset means "let the routing policy choose", and the policy prefers a
+  sampler, so the classical row ran the sampler whenever one was registered —
+  making every classical-versus-sampler comparison a comparison of the sampler
+  with itself. `classical` is now an explicit backend name.
+
 ### Notes
 
 - Measured over 240 seeded instances: classical local search stays the better
-  default. The QUBO lane matches or beats it at 5-6 stops with generous
+  default for sequencing. The QUBO lane matches or beats it at 5-6 stops with generous
   `num_reads`, and falls behind from 7 stops upward. See
   `docs/brains/qrouter.md`.
 
