@@ -5,6 +5,24 @@ All notable changes to the published `quantumclaw` crate.
 This project follows [Semantic Versioning](https://semver.org/). While the crate
 is below `1.0.0`, breaking changes bump the minor version.
 
+## [0.2.1] - 2026-08-12
+
+### Changed
+
+- The `ocean_missing` error and every install instruction now point at
+  `pip install 'quantumclaw-dwave[dwave]'`. The bridge is published on PyPI as
+  [`quantumclaw-dwave`](https://pypi.org/project/quantumclaw-dwave/), so the
+  repository-URL install that 0.2.0 suggested is no longer necessary.
+
+### Fixed
+
+- Cleared five yanked transitive dependencies from `Cargo.lock`
+  (`async-utility`, `nostr`, `nostr-relay-pool`, `bitcoin-io`,
+  `bitcoin_hashes`). No manifest or API change; lockfiles do not affect
+  consumers of a published library.
+
+No API changes. Upgrading from 0.2.0 needs no code edits.
+
 ## [0.2.0] - 2026-08-12
 
 ### Added
@@ -74,8 +92,8 @@ existing constructors keep working.
 - The `dwave-hybrid` and `dwave-qpu` backends have not been exercised against
   live D-Wave hardware or the Leap service. Their failure paths are tested;
   their success paths are unverified.
-- The Python bridge is not published to PyPI yet and installs from the
-  repository. See `docs/providers/dwave.md`.
+- The Python bridge was not on PyPI at the time of this release and installed
+  from the repository. It is published as of 0.2.1.
 - No benchmark in this release demonstrates a quantum advantage.
 
 ## [0.1.0] - 2026-06-07
