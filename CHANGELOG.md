@@ -5,6 +5,24 @@ All notable changes to the published `quantumclaw` crate.
 This project follows [Semantic Versioning](https://semver.org/). While the crate
 is below `1.0.0`, breaking changes bump the minor version.
 
+## [Unreleased]
+
+### Added
+
+- Opt-in QUBO route sequencing (`SequencingPolicy`). Position-encoded TSP over
+  `n^2` binaries, guarded by a size threshold, and applied only when the
+  sampled tour is strictly shorter than the classical one and decodes to a
+  valid permutation.
+- `sequencing_benchmark` example, which scores both methods against the exact
+  optimum by enumerating permutations.
+
+### Notes
+
+- Measured over 240 seeded instances: classical local search stays the better
+  default. The QUBO lane matches or beats it at 5-6 stops with generous
+  `num_reads`, and falls behind from 7 stops upward. See
+  `docs/brains/qrouter.md`.
+
 ## [0.2.2] - 2026-08-12
 
 ### Added
