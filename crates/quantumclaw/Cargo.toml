@@ -1,6 +1,6 @@
 [package]
 name = "quantumclaw"
-version = "0.1.0"
+version = "0.2.0"
 description = "Single-crate public API for the QuantumClaw agent runtime built on ZeroClaw."
 edition.workspace = true
 license.workspace = true

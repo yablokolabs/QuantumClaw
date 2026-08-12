@@ -35,7 +35,7 @@ QuantumClaw is distributed on crates.io as a **single public crate**:
 
 ```toml
 [dependencies]
-quantumclaw = "0.1.0"
+quantumclaw = "0.2.0"
 ```
 
 All implementation components remain internal workspace crates with `publish = false`. They are hidden from crates.io so consumers have one public dependency surface: `quantumclaw`. Application code should use `use quantumclaw::prelude::*;` or short module paths such as `quantumclaw::planner`, `quantumclaw::runtime`, `quantumclaw::memory`, `quantumclaw::tools`, and `quantumclaw::policy`.
@@ -585,7 +585,8 @@ simulated annealing over an Ocean-compatible BQM. It is not a QPU simulator.
 
 ```sh
 # Ocean lives behind a Python sidecar, so it never enters a QuantumClaw build.
-pip install "crates/quantumclaw-providers-dwave/python[local]"
+# The bridge is not on PyPI yet, so install it from this repository.
+pip install "quantumclaw-dwave[local] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python"
 export QUANTUMCLAW_DWAVE_PYTHON=$(which python)
 
 cargo run -p quantumclaw-app --bin quantumclaw -- backends

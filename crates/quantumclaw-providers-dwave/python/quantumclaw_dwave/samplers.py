@@ -25,6 +25,7 @@ from typing import Any
 
 from .errors import (
     AUTHENTICATION_FAILED,
+    INSTALL_HINT,
     EMBEDDING_FAILED,
     INVALID_CONFIGURATION,
     MISSING_CREDENTIALS,
@@ -37,11 +38,6 @@ from .errors import (
     BridgeError,
 )
 from .models import BridgeRequest, build_dimod_bqm
-
-INSTALL_HINT = (
-    "D-Wave Ocean backend is not installed. Install QuantumClaw with D-Wave support: "
-    "pip install 'quantumclaw-dwave[dwave]'"
-)
 
 DEFAULT_EXACT_MAX_VARIABLES = 20
 

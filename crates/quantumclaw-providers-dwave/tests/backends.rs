@@ -122,10 +122,12 @@ async fn a_missing_ocean_installation_explains_how_to_install_it() {
         .map(|_| ())
         .expect_err("a missing interpreter cannot solve");
 
+    // The guidance has to be a command the user can actually run, not just a
+    // statement that something is missing.
     let message = error.to_string();
     assert!(
-        message.contains("Install QuantumClaw with D-Wave support"),
-        "expected install guidance, got: {message}"
+        message.contains("pip install") && message.contains("quantumclaw-dwave"),
+        "expected a runnable install command, got: {message}"
     );
     assert!(
         message.contains("ocean_missing"),

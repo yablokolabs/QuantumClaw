@@ -8,6 +8,13 @@ from __future__ import annotations
 
 from typing import Any
 
+#: Shown whenever Ocean cannot be imported. The bridge is not on PyPI yet, so
+#: this installs it straight from the repository.
+INSTALL_HINT = (
+    "D-Wave Ocean backend is not installed. Install the QuantumClaw bridge with: "
+    "pip install 'quantumclaw-dwave[dwave] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python'"
+)
+
 OCEAN_MISSING = "ocean_missing"
 INVALID_REQUEST = "invalid_request"
 INVALID_BQM = "invalid_bqm"

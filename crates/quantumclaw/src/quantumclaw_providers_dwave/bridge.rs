@@ -16,7 +16,9 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use tokio::time::timeout;
 
-const INSTALL_HINT: &str = "D-Wave Ocean backend is not installed. Install QuantumClaw with D-Wave support: pip install 'quantumclaw-dwave[dwave]'";
+/// The bridge is not published to PyPI yet, so the actionable instruction is a
+/// direct install from the repository.
+const INSTALL_HINT: &str = "D-Wave Ocean backend is not installed. Install the QuantumClaw bridge with: pip install 'quantumclaw-dwave[dwave] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python'";
 
 /// Runs Ocean sampling requests through the Python bridge.
 #[derive(Debug, Clone, Default)]
