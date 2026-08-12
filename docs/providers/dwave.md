@@ -64,12 +64,20 @@ credentials.
 QuantumClaw's core is Rust; Ocean is Python. The two meet at a small JSON
 sidecar, so Ocean's dependency tree never enters a QuantumClaw build.
 
+The bridge is **not on PyPI yet**, so install it from the repository.
+
 ```sh
 # Local classical samplers only — no cloud client, no credentials.
-pip install "crates/quantumclaw-providers-dwave/python[local]"
+pip install "quantumclaw-dwave[local] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python"
 
 # Everything, including the Leap cloud client, QPU sampler, and embedding tools.
-pip install "crates/quantumclaw-providers-dwave/python[dwave]"
+pip install "quantumclaw-dwave[dwave] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python"
+```
+
+From a checkout you can use the path directly instead:
+
+```sh
+pip install "crates/quantumclaw-providers-dwave/python[local]"
 ```
 
 Then point QuantumClaw at the interpreter that has it:
@@ -81,8 +89,8 @@ export QUANTUMCLAW_DWAVE_PYTHON=/path/to/venv/bin/python
 If Ocean is missing, backends fail with
 
 ```
-D-Wave Ocean backend is not installed. Install QuantumClaw with D-Wave support:
-pip install 'quantumclaw-dwave[dwave]'
+D-Wave Ocean backend is not installed. Install the QuantumClaw bridge with:
+pip install 'quantumclaw-dwave[dwave] @ git+https://github.com/yablokolabs/QuantumClaw#subdirectory=crates/quantumclaw-providers-dwave/python'
 ```
 
 rather than a stack trace. Registration itself never touches Ocean, so
@@ -207,6 +215,8 @@ preserved as the cause.
   produces an `UnsupportedConstraint` error rather than a silently wrong model.
 - `dwave-exact` enumerates `2^n` assignments. Its default 20-variable limit is
   a guard, not a suggestion.
+- The bridge is not published to PyPI. Until it is, installation goes through
+  the repository URL above, which needs `git` on the installing machine.
 - No benchmark in this repository shows a quantum advantage. On the bundled
   logistics example, `dwave-sa` and the classical path reach the same objective.
   That is the honest current state, and the ShadowCompare machinery exists

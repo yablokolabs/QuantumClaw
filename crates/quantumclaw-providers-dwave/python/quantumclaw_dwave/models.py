@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-from .errors import INVALID_BQM, INVALID_REQUEST, OCEAN_MISSING, BridgeError
+from .errors import INSTALL_HINT, INVALID_BQM, INVALID_REQUEST, OCEAN_MISSING, BridgeError
 
 PROTOCOL_VERSION = 1
 
@@ -139,12 +139,7 @@ def build_dimod_bqm(spec: BqmSpec):
     try:
         import dimod
     except ImportError as exc:  # pragma: no cover - exercised only without Ocean
-        raise BridgeError(
-            OCEAN_MISSING,
-            "D-Wave Ocean is not installed. Install QuantumClaw with D-Wave support: "
-            "pip install 'quantumclaw-dwave[dwave]'",
-            exc,
-        ) from exc
+        raise BridgeError(OCEAN_MISSING, INSTALL_HINT, exc) from exc
 
     bqm = dimod.BinaryQuadraticModel(dimod.BINARY)
     for name in spec.variables:
