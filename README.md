@@ -36,7 +36,7 @@ QuantumClaw is distributed on crates.io as a **single public crate**:
 
 ```toml
 [dependencies]
-quantumclaw = "0.2.2"
+quantumclaw = "0.3.0"
 ```
 
 The D-Wave lanes additionally need the Ocean bridge, published separately on
