@@ -591,6 +591,36 @@ simulated annealing over an Ocean-compatible BQM. It is not a QPU simulator.
 emulator** of quantum annealing dynamics on your CPU: quantum-inspired, never
 labelled as a quantum device.
 
+### What the sweep shows
+
+`scripts/benchmark_sweep.py` runs every backend over deterministic instances of
+5–10 stops, two seed bases, five repeats each, and ranks on **feasibility
+first, then median objective** — the same rule the benchmark CLI uses. Median
+objective per seed base, with feasibility in parentheses:
+
+| stops | classical (greedy) | dwave-sa | dwave-sqa | winner |
+|---|---|---|---|---|
+| 5 | 392.6 (5/5) · 392.6 (5/5) | 342.4–401.7 (3/5 · 5/5) | 392.6–396.3 (5/5) | classical¹ |
+| 6 | 391.4 ✗ | 453.7 (4/5) · 437.9 (3/5) | 453.7 (3/5) · 437.9 (4/5) | dwave-sa · dwave-sqa |
+| 7 | 372.2 ✗ | **428.4 (5/5) · 436.9 (5/5)** | 409.1–416.8 (3/5) | **dwave-sa** |
+| 8 | 490.8 (5/5) | 468.9–470.0 (5/5) | **441.5 (5/5)** | **dwave-sqa** |
+| 10 | **500.9 (5/5)** | 517.4–526.1 (5/5) | 538.2–520.7 (5/5) | **classical** |
+
+The headline case: at **8 stops the quantum annealing emulator wins outright** —
+441.5 against 468.9 (`dwave-sa`) and 490.8 (classical), with every run
+feasible on both seed bases.
+
+- ✗ = infeasible on every run. The greedy path strands deliveries on tight
+  capacity; feasibility is ranked first, so a cheaper plan that cannot serve
+  everyone never wins.
+- ¹ at 5 stops the classical and `dwave-sqa` medians tied on seed base 1;
+  `dwave-sa`'s best median (342.4) came from runs feasible only 3/5.
+- Numbers are example output and move with the installed Ocean version;
+  reproduce them with `python3 scripts/benchmark_sweep.py`.
+- The classical-named backends (`greedy-classical`, `branch-and-bound-classical`,
+  …) are omitted: none supports quadratic models, so each silently resolves to
+  the same cheapest-insertion fallback shown as `classical`.
+
 ### Quick start
 
 ```sh
