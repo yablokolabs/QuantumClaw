@@ -593,82 +593,102 @@ labelled as a quantum device.
 
 ### What the sweep shows
 
+> [!IMPORTANT]
+> **🏆 The quantum annealing emulator wins outright at 8 stops** — median
+> **441.5** vs 468.9 (`dwave-sa`) and 490.8 (classical), every run feasible on
+> both seed bases. Every number below reproduces with
+> `python3 scripts/benchmark_sweep.py`.
+
 `scripts/benchmark_sweep.py` runs every backend over deterministic instances of
 5–10 stops, two seed bases, five repeats each, and ranks on **feasibility
 first, then median objective** — the same rule the benchmark CLI uses.
-`feasible` is per seed base (5 runs each); `median` is the median objective
-per seed base; `solver ms` is the mean in-sampler time:
 
-| stops | backend | feasible | median | solver ms |
-|---|---|---|---|---|
-| 5 | classical | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | greedy-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | beam-search-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | heuristic-search-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | branch-and-bound-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | simulated-annealing-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | evolutionary-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | quantum-inspired-hybrid † | 5/5 · 5/5 | 392.6 · 392.6 | — |
-| 5 | dwave-sa | 3/5 · 5/5 | 342.4 · 401.7 | 36 |
-| 5 | dwave-sqa | 5/5 · 5/5 | 392.6 · 396.3 | 567 |
-| 6 | classical | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | greedy-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | beam-search-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | heuristic-search-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | branch-and-bound-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | simulated-annealing-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | evolutionary-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | quantum-inspired-hybrid † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
-| 6 | dwave-sa | 4/5 · 3/5 | 453.7 · 437.9 | 41 |
-| 6 | dwave-sqa | 3/5 · 4/5 | 453.7 · 437.9 | 641 |
-| 7 | classical | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | greedy-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | beam-search-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | heuristic-search-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | branch-and-bound-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | simulated-annealing-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | evolutionary-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | quantum-inspired-hybrid † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
-| 7 | dwave-sa | **5/5 · 5/5** | **428.4 · 436.9** | 44 |
-| 7 | dwave-sqa | 3/5 · 3/5 | 409.1 · 416.8 | 747 |
-| 8 | classical | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | greedy-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | beam-search-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | heuristic-search-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | branch-and-bound-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | simulated-annealing-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | evolutionary-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | quantum-inspired-hybrid † | 5/5 · 5/5 | 490.8 · 490.8 | — |
-| 8 | dwave-sa | 5/5 · 5/5 | 468.9 · 470.0 | 50 |
-| 8 | dwave-sqa | **5/5 · 5/5** | **441.5 · 441.5** | 854 |
-| 10 | classical | 5/5 · 5/5 | **500.9 · 500.9** | — |
-| 10 | greedy-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | beam-search-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | heuristic-search-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | branch-and-bound-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | simulated-annealing-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | evolutionary-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | quantum-inspired-hybrid † | 5/5 · 5/5 | 500.9 · 500.9 | — |
-| 10 | dwave-sa | 5/5 · 5/5 | 517.4 · 526.1 | 60 |
-| 10 | dwave-sqa | 5/5 · 5/5 | 538.2 · 520.7 | 1184 |
+<table>
+<thead>
+<tr>
+  <th style="text-align:left;background:#161b22;color:#58a6ff">stops</th>
+  <th style="text-align:left;background:#161b22;color:#58a6ff">backend</th>
+  <th style="background:#161b22;color:#58a6ff">feasible</th>
+  <th style="background:#161b22;color:#58a6ff">median objective</th>
+  <th style="background:#161b22;color:#58a6ff">solver ms</th>
+  <th style="background:#161b22;color:#58a6ff">winner</th>
+</tr>
+</thead>
+<tbody>
+<tr><td>5</td><td>classical</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td>classical¹</td></tr>
+<tr><td>5</td><td>greedy-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>beam-search-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>heuristic-search-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>branch-and-bound-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>simulated-annealing-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>evolutionary-classical †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>quantum-inspired-hybrid †</td><td>5/5 · 5/5</td><td>392.6 · 392.6</td><td>—</td><td></td></tr>
+<tr><td>5</td><td>dwave-sa</td><td>3/5 · 5/5</td><td>342.4 · 401.7</td><td>36</td><td></td></tr>
+<tr><td>5</td><td>dwave-sqa</td><td>5/5 · 5/5</td><td>392.6 · 396.3</td><td>567</td><td></td></tr>
+<tr><td>6</td><td>classical</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>greedy-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>beam-search-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>heuristic-search-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>branch-and-bound-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>simulated-annealing-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>evolutionary-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>quantum-inspired-hybrid †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">391.4 · 391.4</td><td>—</td><td></td></tr>
+<tr><td>6</td><td>dwave-sa</td><td>4/5 · 3/5</td><td>453.7 · 437.9</td><td>41</td><td>dwave-sa · dwave-sqa</td></tr>
+<tr><td>6</td><td>dwave-sqa</td><td>3/5 · 4/5</td><td>453.7 · 437.9</td><td>641</td><td></td></tr>
+<tr><td>7</td><td>classical</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>greedy-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>beam-search-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>heuristic-search-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>branch-and-bound-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>simulated-annealing-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>evolutionary-classical †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>quantum-inspired-hybrid †</td><td><span style="color:#f85149">0/5 · 0/5 ✗</span></td><td style="color:#8b949e">372.2 · 372.2</td><td>—</td><td></td></tr>
+<tr><td>7</td><td>dwave-sa</td><td><b>5/5 · 5/5</b></td><td style="background:rgba(31,111,235,0.15);font-weight:600;color:#1f6feb">428.4 · 436.9</td><td>44</td><td>🥇 dwave-sa</td></tr>
+<tr><td>7</td><td>dwave-sqa</td><td>3/5 · 3/5</td><td>409.1 · 416.8</td><td>747</td><td></td></tr>
+<tr><td>8</td><td>classical</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>greedy-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>beam-search-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>heuristic-search-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>branch-and-bound-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>simulated-annealing-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>evolutionary-classical †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>quantum-inspired-hybrid †</td><td>5/5 · 5/5</td><td>490.8 · 490.8</td><td>—</td><td></td></tr>
+<tr><td>8</td><td>dwave-sa</td><td>5/5 · 5/5</td><td>468.9 · 470.0</td><td>50</td><td></td></tr>
+<tr style="background:rgba(46,160,67,0.12)"><td><b>8</b></td><td><b>dwave-sqa 🏆</b></td><td><b>5/5 · 5/5</b></td><td style="background:rgba(46,160,67,0.28);font-weight:700;color:#2ea043">441.5 · 441.5</td><td>854</td><td><b>🏆 dwave-sqa</b></td></tr>
+<tr><td>10</td><td>classical</td><td>5/5 · 5/5</td><td style="background:rgba(210,153,34,0.2);font-weight:600;color:#d29922">500.9 · 500.9</td><td>—</td><td>⭐ classical</td></tr>
+<tr><td>10</td><td>greedy-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>beam-search-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>heuristic-search-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>branch-and-bound-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>simulated-annealing-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>evolutionary-classical †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>quantum-inspired-hybrid †</td><td>5/5 · 5/5</td><td>500.9 · 500.9</td><td>—</td><td></td></tr>
+<tr><td>10</td><td>dwave-sa</td><td>5/5 · 5/5</td><td>517.4 · 526.1</td><td>60</td><td></td></tr>
+<tr><td>10</td><td>dwave-sqa</td><td>5/5 · 5/5</td><td>538.2 · 520.7</td><td>1184</td><td></td></tr>
+</tbody>
+</table>
 
-**Bold = the winning lane for that size** (feasibility first, then median). The
-headline case: at **8 stops the quantum annealing emulator wins outright** —
-441.5 against 468.9 (`dwave-sa`) and 490.8 (classical), every run feasible on
-both seed bases.
+**🏆** emulator wins · **🥇** `dwave-sa` wins · **⭐** classical wins · **✗**
+infeasible on every run. Winners are chosen by the benchmark's own rule:
+feasibility first, then median objective.
 
-- ✗ = infeasible on every run: the greedy path strands deliveries on tight
-  capacity. Feasibility is ranked first, so a cheaper plan that cannot serve
-  everyone never wins — that is also why `dwave-sa`'s 342.4 at 5 stops is not
-  the winner (feasible only 3/5 on that seed base).
+<details>
+<summary><b>Methodology & honest caveats</b></summary>
+
+- Feasibility is ranked first, so a cheaper plan that cannot serve everyone
+  never wins — that is also why `dwave-sa`'s 342.4 at 5 stops is not the
+  winner (feasible only 3/5 on that seed base).
 - At 6 stops the winner splits by seed base: `dwave-sa` (453.7, 4/5) on seed
   base 1 and `dwave-sqa` (437.9, 4/5) on seed base 2.
+- ¹ at 5 stops the classical and `dwave-sqa` medians tied on seed base 1.
 - † the classical-named backends all return the same numbers because none
   supports quadratic models — each silently resolves to the brain's
   cheapest-insertion fallback, shown as `classical`. Only `classical`,
   `dwave-sa`, and `dwave-sqa` are distinct lanes today.
 - Numbers are example output and move with the installed Ocean version;
   reproduce them with `python3 scripts/benchmark_sweep.py`.
+
+</details>
 
 ### Quick start
 
