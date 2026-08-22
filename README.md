@@ -595,31 +595,80 @@ labelled as a quantum device.
 
 `scripts/benchmark_sweep.py` runs every backend over deterministic instances of
 5–10 stops, two seed bases, five repeats each, and ranks on **feasibility
-first, then median objective** — the same rule the benchmark CLI uses. Median
-objective per seed base, with feasibility in parentheses:
+first, then median objective** — the same rule the benchmark CLI uses.
+`feasible` is per seed base (5 runs each); `median` is the median objective
+per seed base; `solver ms` is the mean in-sampler time:
 
-| stops | classical (greedy) | dwave-sa | dwave-sqa | winner |
+| stops | backend | feasible | median | solver ms |
 |---|---|---|---|---|
-| 5 | 392.6 (5/5) · 392.6 (5/5) | 342.4–401.7 (3/5 · 5/5) | 392.6–396.3 (5/5) | classical¹ |
-| 6 | 391.4 ✗ | 453.7 (4/5) · 437.9 (3/5) | 453.7 (3/5) · 437.9 (4/5) | dwave-sa · dwave-sqa |
-| 7 | 372.2 ✗ | **428.4 (5/5) · 436.9 (5/5)** | 409.1–416.8 (3/5) | **dwave-sa** |
-| 8 | 490.8 (5/5) | 468.9–470.0 (5/5) | **441.5 (5/5)** | **dwave-sqa** |
-| 10 | **500.9 (5/5)** | 517.4–526.1 (5/5) | 538.2–520.7 (5/5) | **classical** |
+| 5 | classical | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | greedy-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | beam-search-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | heuristic-search-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | branch-and-bound-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | simulated-annealing-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | evolutionary-classical † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | quantum-inspired-hybrid † | 5/5 · 5/5 | 392.6 · 392.6 | — |
+| 5 | dwave-sa | 3/5 · 5/5 | 342.4 · 401.7 | 36 |
+| 5 | dwave-sqa | 5/5 · 5/5 | 392.6 · 396.3 | 567 |
+| 6 | classical | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | greedy-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | beam-search-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | heuristic-search-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | branch-and-bound-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | simulated-annealing-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | evolutionary-classical † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | quantum-inspired-hybrid † | 0/5 · 0/5 ✗ | 391.4 · 391.4 | — |
+| 6 | dwave-sa | 4/5 · 3/5 | 453.7 · 437.9 | 41 |
+| 6 | dwave-sqa | 3/5 · 4/5 | 453.7 · 437.9 | 641 |
+| 7 | classical | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | greedy-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | beam-search-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | heuristic-search-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | branch-and-bound-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | simulated-annealing-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | evolutionary-classical † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | quantum-inspired-hybrid † | 0/5 · 0/5 ✗ | 372.2 · 372.2 | — |
+| 7 | dwave-sa | **5/5 · 5/5** | **428.4 · 436.9** | 44 |
+| 7 | dwave-sqa | 3/5 · 3/5 | 409.1 · 416.8 | 747 |
+| 8 | classical | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | greedy-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | beam-search-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | heuristic-search-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | branch-and-bound-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | simulated-annealing-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | evolutionary-classical † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | quantum-inspired-hybrid † | 5/5 · 5/5 | 490.8 · 490.8 | — |
+| 8 | dwave-sa | 5/5 · 5/5 | 468.9 · 470.0 | 50 |
+| 8 | dwave-sqa | **5/5 · 5/5** | **441.5 · 441.5** | 854 |
+| 10 | classical | 5/5 · 5/5 | **500.9 · 500.9** | — |
+| 10 | greedy-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | beam-search-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | heuristic-search-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | branch-and-bound-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | simulated-annealing-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | evolutionary-classical † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | quantum-inspired-hybrid † | 5/5 · 5/5 | 500.9 · 500.9 | — |
+| 10 | dwave-sa | 5/5 · 5/5 | 517.4 · 526.1 | 60 |
+| 10 | dwave-sqa | 5/5 · 5/5 | 538.2 · 520.7 | 1184 |
 
-The headline case: at **8 stops the quantum annealing emulator wins outright** —
-441.5 against 468.9 (`dwave-sa`) and 490.8 (classical), with every run
-feasible on both seed bases.
+**Bold = the winning lane for that size** (feasibility first, then median). The
+headline case: at **8 stops the quantum annealing emulator wins outright** —
+441.5 against 468.9 (`dwave-sa`) and 490.8 (classical), every run feasible on
+both seed bases.
 
-- ✗ = infeasible on every run. The greedy path strands deliveries on tight
-  capacity; feasibility is ranked first, so a cheaper plan that cannot serve
-  everyone never wins.
-- ¹ at 5 stops the classical and `dwave-sqa` medians tied on seed base 1;
-  `dwave-sa`'s best median (342.4) came from runs feasible only 3/5.
+- ✗ = infeasible on every run: the greedy path strands deliveries on tight
+  capacity. Feasibility is ranked first, so a cheaper plan that cannot serve
+  everyone never wins — that is also why `dwave-sa`'s 342.4 at 5 stops is not
+  the winner (feasible only 3/5 on that seed base).
+- At 6 stops the winner splits by seed base: `dwave-sa` (453.7, 4/5) on seed
+  base 1 and `dwave-sqa` (437.9, 4/5) on seed base 2.
+- † the classical-named backends all return the same numbers because none
+  supports quadratic models — each silently resolves to the brain's
+  cheapest-insertion fallback, shown as `classical`. Only `classical`,
+  `dwave-sa`, and `dwave-sqa` are distinct lanes today.
 - Numbers are example output and move with the installed Ocean version;
   reproduce them with `python3 scripts/benchmark_sweep.py`.
-- The classical-named backends (`greedy-classical`, `branch-and-bound-classical`,
-  …) are omitted: none supports quadratic models, so each silently resolves to
-  the same cheapest-insertion fallback shown as `classical`.
 
 ### Quick start
 
