@@ -7,7 +7,8 @@ JSON sidecar. The Rust provider spawns `python -m quantumclaw_dwave.bridge`,
 writes one request on stdin, and reads one response on stdout.
 
 ```sh
-# Local classical samplers only: simulated annealing and exhaustive search.
+# Local samplers only: classical simulated annealing, the quantum annealing
+# emulator (PathIntegralAnnealingSampler), and exhaustive search.
 # No cloud client, no credentials.
 pip install "quantumclaw-dwave[local]"
 
@@ -28,4 +29,6 @@ python -m quantumclaw_dwave.bridge --probe
 ```
 
 `SimulatedAnnealingSampler` is a **classical** algorithm. It is not a QPU
-simulator. See `docs/providers/dwave.md` in the main repository.
+simulator. `PathIntegralAnnealingSampler` (`dwave-sqa`) is a **local emulator**
+of quantum annealing dynamics — quantum-inspired, not a quantum device. See
+`docs/providers/dwave.md` in the main repository.

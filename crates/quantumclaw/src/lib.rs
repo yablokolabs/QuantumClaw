@@ -69,8 +69,9 @@ pub mod brains {
 
 /// Solver providers.
 pub mod providers {
-    /// D-Wave Ocean backends: local simulated annealing, exhaustive search,
-    /// Leap hybrid, and quantum annealing hardware.
+    /// D-Wave Ocean backends: local simulated annealing, a local quantum
+    /// annealing emulator, exhaustive search, Leap hybrid, and quantum
+    /// annealing hardware.
     pub mod dwave {
         pub use crate::quantumclaw_providers_dwave::*;
     }
@@ -156,7 +157,8 @@ pub mod prelude {
     };
     pub use crate::providers::dwave::{
         DWaveBridge, DWaveConfig, DWaveExactSolverBackend, DWaveLeapHybridBackend, DWaveQpuBackend,
-        DWaveRunMetadata, DWaveSimulatedAnnealingBackend, LeapConfig, SimulatedAnnealingParams,
+        DWaveRunMetadata, DWaveSimulatedAnnealingBackend, DWaveSimulatedQuantumAnnealingBackend,
+        LeapConfig, SimulatedAnnealingParams, SimulatedQuantumAnnealingParams,
     };
     pub use crate::runtime::{
         AgentLifecycle, Channel, InMemorySubagentRegistry, MessageRouter, PromptTemplate,

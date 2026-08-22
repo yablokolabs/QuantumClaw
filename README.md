@@ -102,7 +102,7 @@ Rendered from [`docs/diagrams/quantumclaw-architecture.mmd`](docs/diagrams/quant
 4. **Solver layer**
    - classical solvers
    - quantum-inspired solvers
-   - D-Wave Ocean provider: `dwave-sa`, `dwave-exact`, `dwave-hybrid`, `dwave-qpu`
+   - D-Wave Ocean provider: `dwave-sa`, `dwave-sqa`, `dwave-exact`, `dwave-hybrid`, `dwave-qpu`
    - future QPU adapters
    - optional CUDA-Q experiments as spike/backend candidates, not core runtime dependencies
 
@@ -580,13 +580,16 @@ DecisionProblem / OptimizationProblem
         ↓  quantumclaw-optimization
 BQM (minimization form, penalty-encoded constraints)
         ↓  SolverBackend
-classical | dwave-sa | dwave-exact | dwave-hybrid | dwave-qpu
+classical | dwave-sa | dwave-sqa | dwave-exact | dwave-hybrid | dwave-qpu
         ↓
 SolverOutput + OptimizationSolution + provider metadata
 ```
 
 `dwave-sa` runs `dwave.samplers.SimulatedAnnealingSampler`: **classical**
 simulated annealing over an Ocean-compatible BQM. It is not a QPU simulator.
+`dwave-sqa` runs `dwave.samplers.PathIntegralAnnealingSampler`, a **local
+emulator** of quantum annealing dynamics on your CPU: quantum-inspired, never
+labelled as a quantum device.
 
 ### Quick start
 
@@ -603,8 +606,12 @@ cargo run -p quantumclaw-app --bin quantumclaw -- benchmark problem.json \
 # Q-Router, the logistics brain
 cargo run -p quantumclaw-app --bin quantumclaw -- \
     qrouter benchmark crates/quantumclaw-app/examples/data/sao-paulo-deliveries.json \
-    --backends classical,dwave-sa
+    --backends classical,dwave-sa,dwave-sqa
 ```
+
+`dwave-sqa` is the local quantum annealing emulator lane; the benchmark ranks
+candidates on feasibility first, then median objective, and `qrouter.md`
+shows what that surfaces.
 
 Details: [`docs/providers/dwave.md`](docs/providers/dwave.md) and
 [`docs/brains/qrouter.md`](docs/brains/qrouter.md).

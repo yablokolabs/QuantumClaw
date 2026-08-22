@@ -58,18 +58,30 @@ fn the_public_crate_exposes_every_dwave_backend() {
     use quantumclaw::core::{SolverBackend, SolverKind, SolverRegistry};
     use quantumclaw::providers::dwave::{
         register_backends_from_env, DWaveSimulatedAnnealingBackend,
+        DWaveSimulatedQuantumAnnealingBackend,
     };
 
     let mut registry = SolverRegistry::new();
     register_backends_from_env(&mut registry);
 
-    for name in ["dwave-sa", "dwave-exact", "dwave-hybrid", "dwave-qpu"] {
+    for name in [
+        "dwave-sa",
+        "dwave-sqa",
+        "dwave-exact",
+        "dwave-hybrid",
+        "dwave-qpu",
+    ] {
         assert!(registry.get(name).is_some(), "{name} must be selectable");
     }
     // Simulated annealing is classical, whatever SDK drives it.
     assert_eq!(
         DWaveSimulatedAnnealingBackend::from_env().kind(),
         SolverKind::Classical
+    );
+    // The local emulator is quantum-inspired, never a quantum device.
+    assert_eq!(
+        DWaveSimulatedQuantumAnnealingBackend::from_env().kind(),
+        SolverKind::QuantumInspired
     );
 }
 

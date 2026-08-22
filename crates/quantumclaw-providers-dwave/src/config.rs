@@ -193,6 +193,48 @@ impl SimulatedAnnealingParams {
     }
 }
 
+/// Parameters for the local emulation of quantum annealing.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SimulatedQuantumAnnealingParams {
+    pub num_reads: u32,
+    pub num_sweeps: Option<u32>,
+    pub beta_range: Option<(f64, f64)>,
+    pub seed: Option<u64>,
+}
+
+impl Default for SimulatedQuantumAnnealingParams {
+    fn default() -> Self {
+        Self {
+            num_reads: 100,
+            num_sweeps: Some(1_000),
+            beta_range: None,
+            seed: None,
+        }
+    }
+}
+
+impl SimulatedQuantumAnnealingParams {
+    pub fn with_num_reads(mut self, num_reads: u32) -> Self {
+        self.num_reads = num_reads;
+        self
+    }
+
+    pub fn with_num_sweeps(mut self, num_sweeps: u32) -> Self {
+        self.num_sweeps = Some(num_sweeps);
+        self
+    }
+
+    pub fn with_beta_range(mut self, low: f64, high: f64) -> Self {
+        self.beta_range = Some((low, high));
+        self
+    }
+
+    pub fn with_seed(mut self, seed: u64) -> Self {
+        self.seed = Some(seed);
+        self
+    }
+}
+
 /// Parameters for the exhaustive classical solver.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExactParams {

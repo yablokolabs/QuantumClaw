@@ -18,6 +18,7 @@ pub enum BridgeBackend {
     Exact,
     Hybrid,
     Qpu,
+    SimulatedQuantumAnnealing,
 }
 
 impl BridgeBackend {
@@ -27,6 +28,7 @@ impl BridgeBackend {
             Self::Exact => "exact",
             Self::Hybrid => "hybrid",
             Self::Qpu => "qpu",
+            Self::SimulatedQuantumAnnealing => "simulated_quantum_annealing",
         }
     }
 }

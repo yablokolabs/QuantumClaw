@@ -1,6 +1,6 @@
 //! D-Wave solver backends.
 //!
-//! All four implement the same [`SolverBackend`] contract as QuantumClaw's
+//! All five implement the same [`SolverBackend`] contract as QuantumClaw's
 //! classical and quantum-inspired solvers, so selecting one is a configuration
 //! choice rather than a code change.
 
@@ -13,6 +13,7 @@ use crate::quantumclaw_optimization::{optimization_problem_for, CompiledModel, Q
 use crate::quantumclaw_providers_dwave::bridge::DWaveBridge;
 use crate::quantumclaw_providers_dwave::config::{
     ExactParams, HybridParams, LeapConfig, QpuParams, SimulatedAnnealingParams,
+    SimulatedQuantumAnnealingParams,
 };
 use crate::quantumclaw_providers_dwave::error::{DWaveError, Result};
 use crate::quantumclaw_providers_dwave::models::{BridgeBackend, BridgeBqm, BridgeRequest};
@@ -28,6 +29,8 @@ pub const NAME_EXACT: &str = "dwave-exact";
 pub const NAME_HYBRID: &str = "dwave-hybrid";
 /// Registry name of the quantum annealing backend.
 pub const NAME_QPU: &str = "dwave-qpu";
+/// Registry name of the local quantum annealing emulator backend.
+pub const NAME_SIMULATED_QUANTUM_ANNEALING: &str = "dwave-sqa";
 
 /// Reads a per-solve sampler seed from the problem metadata.
 fn seed_hint(problem: &DecisionProblem) -> Option<u64> {
@@ -311,6 +314,104 @@ impl SolverBackend for DWaveLeapHybridBackend {
             supports_plan_output: true,
             remote: true,
             requires_credentials: true,
+        }
+    }
+
+    async fn solve(
+        &self,
+        problem: DecisionProblem,
+        _context: SolverContext,
+    ) -> CoreResult<SolverOutput> {
+        Ok(self.run(problem).await?)
+    }
+}
+
+/// Local emulation of quantum annealing dynamics.
+///
+/// This runs `dwave.samplers.PathIntegralAnnealingSampler` on the local CPU,
+/// which emulates the path-integral (transverse-field) dynamics of a D-Wave
+/// annealer. It is an emulator, not a QPU: it needs no credentials, no
+/// network, and its results must never be described as real quantum results.
+#[derive(Debug, Clone)]
+pub struct DWaveSimulatedQuantumAnnealingBackend {
+    bridge: Arc<DWaveBridge>,
+    params: SimulatedQuantumAnnealingParams,
+    compiler: QuboCompiler,
+}
+
+impl DWaveSimulatedQuantumAnnealingBackend {
+    pub fn new(bridge: Arc<DWaveBridge>) -> Self {
+        Self {
+            bridge,
+            params: SimulatedQuantumAnnealingParams::default(),
+            compiler: QuboCompiler::default(),
+        }
+    }
+
+    pub fn from_env() -> Self {
+        Self::new(Arc::new(DWaveBridge::from_env()))
+    }
+
+    pub fn with_params(mut self, params: SimulatedQuantumAnnealingParams) -> Self {
+        self.params = params;
+        self
+    }
+
+    pub fn with_compiler(mut self, compiler: QuboCompiler) -> Self {
+        self.compiler = compiler;
+        self
+    }
+
+    async fn run(&self, problem: DecisionProblem) -> Result<SolverOutput> {
+        // An explicitly configured seed wins; otherwise the caller can supply
+        // one per solve, which is how a benchmark makes runs reproducible.
+        let seed = self.params.seed.or_else(|| seed_hint(&problem));
+        let model = compile(&problem, &self.compiler)?;
+        let request = BridgeRequest::new(
+            BridgeBackend::SimulatedQuantumAnnealing,
+            model.problem().id.clone(),
+            BridgeBqm::from(model.bqm()),
+        )
+        .with_parameter("num_reads", self.params.num_reads)
+        .with_optional_parameter("num_sweeps", self.params.num_sweeps)
+        .with_optional_parameter("seed", seed)
+        .with_optional_parameter(
+            "beta_range",
+            self.params
+                .beta_range
+                .map(|(low, high)| serde_json::json!([low, high])),
+        );
+
+        let execution = self.bridge.execute(&request).await?;
+        Ok(to_solver_output(
+            NAME_SIMULATED_QUANTUM_ANNEALING,
+            SolverKind::QuantumInspired,
+            &model,
+            &execution,
+        ))
+    }
+}
+
+#[async_trait]
+impl SolverBackend for DWaveSimulatedQuantumAnnealingBackend {
+    fn name(&self) -> &'static str {
+        NAME_SIMULATED_QUANTUM_ANNEALING
+    }
+
+    fn kind(&self) -> SolverKind {
+        // The sampler genuinely emulates quantum annealing dynamics, so it is
+        // quantum-inspired — but it runs on a local CPU, so it is never
+        // labelled as a quantum device.
+        SolverKind::QuantumInspired
+    }
+
+    fn capabilities(&self) -> SolverCapabilities {
+        SolverCapabilities {
+            max_variables: None,
+            supports_quadratic_models: true,
+            supports_plan_output: true,
+            remote: false,
+            requires_credentials: false,
         }
     }
 

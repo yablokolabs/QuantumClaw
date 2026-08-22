@@ -10,7 +10,7 @@ from .errors import INSTALL_HINT, INVALID_BQM, INVALID_REQUEST, OCEAN_MISSING, B
 
 PROTOCOL_VERSION = 1
 
-BACKENDS = ("simulated_annealing", "exact", "hybrid", "qpu")
+BACKENDS = ("simulated_annealing", "exact", "hybrid", "qpu", "simulated_quantum_annealing")
 
 
 @dataclass
