@@ -4,17 +4,20 @@
 //! [`quantumclaw_core::SolverBackend`] contract as every other backend, so
 //! D-Wave is a configuration choice rather than an architectural commitment.
 //!
-//! Four lanes are available:
+//! Five lanes are available:
 //!
 //! | Registry name  | Execution                                    | Kind               |
 //! |----------------|----------------------------------------------|--------------------|
 //! | `dwave-sa`     | local classical simulated annealing           | `Classical`        |
+//! | `dwave-sqa`    | local emulation of quantum annealing          | `QuantumInspired`  |
 //! | `dwave-exact`  | local classical exhaustive search             | `Classical`        |
 //! | `dwave-hybrid` | D-Wave Leap managed hybrid solver             | `QuantumHybrid`    |
 //! | `dwave-qpu`    | quantum annealing hardware with embedding     | `QuantumAnnealing` |
 //!
 //! `dwave-sa` is **classical** simulated annealing operating on an
-//! Ocean-compatible BQM. It is not a QPU simulator.
+//! Ocean-compatible BQM. It is not a QPU simulator. `dwave-sqa` runs
+//! `PathIntegralAnnealingSampler`, a local emulator of quantum annealing
+//! dynamics; it is quantum-inspired, not a quantum device.
 //!
 //! Ocean itself is reached through a Python sidecar (see [`bridge`]), which
 //! keeps the Ocean dependency tree out of every QuantumClaw installation that
@@ -29,11 +32,13 @@ pub mod result;
 
 pub use backends::{
     DWaveExactSolverBackend, DWaveLeapHybridBackend, DWaveQpuBackend,
-    DWaveSimulatedAnnealingBackend, NAME_EXACT, NAME_HYBRID, NAME_QPU, NAME_SIMULATED_ANNEALING,
+    DWaveSimulatedAnnealingBackend, DWaveSimulatedQuantumAnnealingBackend, NAME_EXACT, NAME_HYBRID,
+    NAME_QPU, NAME_SIMULATED_ANNEALING, NAME_SIMULATED_QUANTUM_ANNEALING,
 };
 pub use bridge::{BridgeExecution, DWaveBridge};
 pub use config::{
     DWaveConfig, ExactParams, HybridParams, LeapConfig, QpuParams, SimulatedAnnealingParams,
+    SimulatedQuantumAnnealingParams,
 };
 pub use error::{DWaveError, Result};
 pub use models::{BridgeBackend, ProbeReport};
@@ -44,12 +49,15 @@ use std::sync::Arc;
 
 /// Registers every D-Wave backend under its short name.
 ///
-/// After this call `--backend dwave-sa`, `dwave-exact`, `dwave-hybrid`, and
-/// `dwave-qpu` all resolve. Registration does not contact D-Wave and does not
-/// require Ocean to be installed; a missing dependency surfaces at solve time
-/// with an actionable message.
+/// After this call `--backend dwave-sa`, `dwave-sqa`, `dwave-exact`,
+/// `dwave-hybrid`, and `dwave-qpu` all resolve. Registration does not contact
+/// D-Wave and does not require Ocean to be installed; a missing dependency
+/// surfaces at solve time with an actionable message.
 pub fn register_backends(registry: &mut SolverRegistry, bridge: Arc<DWaveBridge>) {
     registry.register(Arc::new(DWaveSimulatedAnnealingBackend::new(
+        bridge.clone(),
+    )));
+    registry.register(Arc::new(DWaveSimulatedQuantumAnnealingBackend::new(
         bridge.clone(),
     )));
     registry.register(Arc::new(DWaveExactSolverBackend::new(bridge.clone())));

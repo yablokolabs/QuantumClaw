@@ -18,7 +18,7 @@ pub const PROVIDER: &str = "dwave";
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DWaveRunMetadata {
     pub provider: String,
-    /// `simulated_annealing`, `exact`, `hybrid`, or `qpu`.
+    /// `simulated_annealing`, `simulated_quantum_annealing`, `exact`, `hybrid`, or `qpu`.
     pub backend: String,
     pub sampler: String,
     pub problem_type: String,

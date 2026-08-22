@@ -11,7 +11,8 @@ use quantumclaw_ir::DecisionProblem;
 use quantumclaw_providers_dwave::models::{BridgeBackend, BridgeBqm, BridgeRequest};
 use quantumclaw_providers_dwave::{
     DWaveBridge, DWaveConfig, DWaveExactSolverBackend, DWaveLeapHybridBackend, DWaveQpuBackend,
-    DWaveRunMetadata, DWaveSimulatedAnnealingBackend, ExactParams, SimulatedAnnealingParams,
+    DWaveRunMetadata, DWaveSimulatedAnnealingBackend, DWaveSimulatedQuantumAnnealingBackend,
+    ExactParams, SimulatedAnnealingParams, SimulatedQuantumAnnealingParams,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -228,6 +229,11 @@ fn backend_kinds_describe_the_hardware_honestly() {
         SolverKind::Classical
     );
     assert_eq!(
+        DWaveSimulatedQuantumAnnealingBackend::new(bridge.clone()).kind(),
+        SolverKind::QuantumInspired,
+        "path-integral annealing emulates quantum dynamics on a local CPU; it is never a QPU"
+    );
+    assert_eq!(
         DWaveLeapHybridBackend::new(bridge.clone()).kind(),
         SolverKind::QuantumHybrid
     );
@@ -250,6 +256,12 @@ fn only_remote_backends_declare_that_they_need_credentials() {
         !DWaveExactSolverBackend::new(bridge.clone())
             .capabilities()
             .requires_credentials
+    );
+    assert!(
+        !DWaveSimulatedQuantumAnnealingBackend::new(bridge.clone())
+            .capabilities()
+            .requires_credentials,
+        "the local emulator needs no Leap account"
     );
     assert!(
         DWaveLeapHybridBackend::new(bridge.clone())
@@ -278,6 +290,32 @@ async fn exhaustive_ocean_search_returns_the_hand_computed_optimum() {
     assert_eq!(solution.selected, vec!["d1_v1", "d2_v2", "d3_v1"]);
     assert!(solution.feasible);
     assert!((solution.objective_value - 6.0).abs() < 1e-9);
+}
+
+#[tokio::test]
+async fn simulated_quantum_annealing_matches_the_exhaustive_optimum() {
+    let Some(bridge) = ocean_bridge() else {
+        return;
+    };
+
+    let output = DWaveSimulatedQuantumAnnealingBackend::new(bridge)
+        .with_params(
+            SimulatedQuantumAnnealingParams::default()
+                .with_num_reads(200)
+                .with_num_sweeps(500)
+                .with_seed(42),
+        )
+        .solve(assignment_problem(), context())
+        .await
+        .expect("the quantum annealing emulator runs");
+
+    let solution = output.solution.expect("an optimization result is returned");
+    assert_eq!(solution.selected, vec!["d1_v1", "d2_v2", "d3_v1"]);
+    assert!(solution.feasible);
+    assert!(
+        output.steps.len() == 3,
+        "each selection becomes a plan step"
+    );
 }
 
 #[tokio::test]
@@ -395,4 +433,8 @@ async fn probing_reports_which_lanes_this_host_can_run() {
 
     assert!(report.supports(BridgeBackend::SimulatedAnnealing));
     assert!(report.supports(BridgeBackend::Exact));
+    assert!(
+        report.supports(BridgeBackend::SimulatedQuantumAnnealing),
+        "the local extra provides the path-integral annealing sampler"
+    );
 }

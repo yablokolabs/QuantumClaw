@@ -1,6 +1,6 @@
 """Ocean sampler execution for the QuantumClaw D-Wave bridge.
 
-Four execution lanes are exposed:
+Five execution lanes are exposed:
 
 ``simulated_annealing``
     ``dwave.samplers.SimulatedAnnealingSampler``. This is **classical**
@@ -15,6 +15,10 @@ Four execution lanes are exposed:
 ``qpu``
     ``dwave.system.DWaveSampler`` behind ``EmbeddingComposite``. Quantum
     annealing hardware. Requires Leap credentials and a working minor embedding.
+``simulated_quantum_annealing``
+    ``dwave.samplers.PathIntegralAnnealingSampler``. A **local emulator** of
+    quantum annealing dynamics running on the CPU. It is not a QPU and its
+    results must never be described as real quantum results.
 """
 
 from __future__ import annotations
@@ -268,11 +272,35 @@ def _sample_qpu(request: BridgeRequest, bqm) -> tuple[Any, str, float]:
     return sampleset, "dwave.system.EmbeddingComposite(DWaveSampler)", (time.perf_counter() - started) * 1000.0
 
 
+def _sample_simulated_quantum_annealing(request: BridgeRequest, bqm) -> tuple[Any, str, float]:
+    module = _import("dwave.samplers", extra="local")
+    sampler = module.PathIntegralAnnealingSampler()
+
+    kwargs: dict[str, Any] = {"num_reads": int(request.parameters.get("num_reads", 100))}
+    if request.parameters.get("num_sweeps") is not None:
+        kwargs["num_sweeps"] = int(request.parameters["num_sweeps"])
+    if request.parameters.get("seed") is not None:
+        kwargs["seed"] = int(request.parameters["seed"])
+    beta_range = request.parameters.get("beta_range")
+    if beta_range is not None:
+        if not (isinstance(beta_range, (list, tuple)) and len(beta_range) == 2):
+            raise BridgeError(
+                INVALID_CONFIGURATION, f"beta_range must be a two-element list, got {beta_range!r}"
+            )
+        kwargs["beta_range"] = [float(beta_range[0]), float(beta_range[1])]
+
+    started = time.perf_counter()
+    sampleset = sampler.sample(bqm, **kwargs)
+    sampleset.resolve()
+    return sampleset, "dwave.samplers.PathIntegralAnnealingSampler", (time.perf_counter() - started) * 1000.0
+
+
 _LANES = {
     "simulated_annealing": _sample_simulated_annealing,
     "exact": _sample_exact,
     "hybrid": _sample_hybrid,
     "qpu": _sample_qpu,
+    "simulated_quantum_annealing": _sample_simulated_quantum_annealing,
 }
 
 
@@ -295,22 +323,26 @@ def probe() -> dict[str, Any]:
 
     available: dict[str, bool] = {}
     versions: dict[str, str] = {}
+    modules: dict[str, Any] = {}
     for module_name in ("dimod", "dwave.samplers", "dwave.system", "minorminer"):
         try:
-            module = __import__(module_name, fromlist=["*"])
+            modules[module_name] = __import__(module_name, fromlist=["*"])
         except ImportError:
             available[module_name] = False
             continue
         available[module_name] = True
-        version = getattr(module, "__version__", None)
+        version = getattr(modules[module_name], "__version__", None)
         if version:
             versions[module_name] = str(version)
 
+    samplers = modules.get("dwave.samplers")
     return {
         "available": available,
         "versions": versions,
         "backends": {
             "simulated_annealing": available.get("dwave.samplers", False),
+            "simulated_quantum_annealing": samplers is not None
+            and hasattr(samplers, "PathIntegralAnnealingSampler"),
             "exact": available.get("dimod", False),
             "hybrid": available.get("dwave.system", False),
             "qpu": available.get("dwave.system", False) and available.get("minorminer", False),

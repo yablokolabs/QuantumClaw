@@ -93,6 +93,17 @@ def test_simulated_annealing_finds_the_same_optimum_as_exhaustive_search():
 
 
 @needs_ocean
+def test_simulated_quantum_annealing_finds_the_same_optimum_as_exhaustive_search():
+    response = handle(request("simulated_quantum_annealing"))
+
+    assert response["ok"], response
+    expected_assignment, expected_energy = brute_force_optimum(request("exact"))
+    assert response["result"]["best"]["sample"] == expected_assignment
+    assert response["result"]["best"]["energy"] == pytest.approx(expected_energy)
+    assert response["result"]["solver_runtime_ms"] >= 0.0
+
+
+@needs_ocean
 def test_simulated_annealing_is_reproducible_for_a_fixed_seed():
     first = handle(request("simulated_annealing", parameters={"num_reads": 20, "seed": 1234}))
     second = handle(request("simulated_annealing", parameters={"num_reads": 20, "seed": 1234}))
@@ -188,6 +199,7 @@ def test_probe_reports_backend_availability(capsys):
     assert captured["ok"] is True
     assert set(captured["result"]["backends"]) == {
         "simulated_annealing",
+        "simulated_quantum_annealing",
         "exact",
         "hybrid",
         "qpu",

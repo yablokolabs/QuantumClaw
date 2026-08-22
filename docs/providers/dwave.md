@@ -14,6 +14,7 @@ SolverBackend      (quantumclaw-core)
         ├── greedy-classical, beam-search-classical, …
         ├── quantum-inspired-hybrid
         ├── dwave-sa       → classical simulated annealing (local)
+        ├── dwave-sqa      → local emulation of quantum annealing (local)
         ├── dwave-exact    → classical exhaustive search (local)
         ├── dwave-hybrid   → D-Wave Leap hybrid solver (cloud)
         └── dwave-qpu      → quantum annealing hardware (cloud)
@@ -21,7 +22,7 @@ SolverBackend      (quantumclaw-core)
 SolverOutput + OptimizationSolution + provider metadata
 ```
 
-## The three execution lanes
+## The execution lanes
 
 ### Local development
 
@@ -38,6 +39,20 @@ repository claims otherwise, and results from this lane must never be described
 as quantum results.
 
 Requires no D-Wave account, no credentials, and no network access.
+
+### Local quantum annealing emulation
+
+```
+QuantumClaw → Ocean → dwave.samplers.PathIntegralAnnealingSampler → emulated quantum annealing
+```
+
+**`dwave-sqa` runs `PathIntegralAnnealingSampler`, a local emulator of quantum
+annealing dynamics on your CPU.** It simulates the path-integral
+(transverse-field) evolution of an annealer, which makes it the closest free,
+credential-free counterpart to the QPU lane — useful for developing and
+benchmarking a QUBO with real annealing dynamics before spending Leap credits.
+It is an emulator, not a quantum device: no credentials and no network are
+involved, and its results must never be described as real quantum results.
 
 ### Hybrid production option
 
@@ -124,9 +139,11 @@ let backend = DWaveSimulatedAnnealingBackend::from_env().with_params(
 );
 ```
 
-`dwave-exact` takes `ExactParams::with_max_variables` (default 20),
-`dwave-hybrid` takes `HybridParams::with_time_limit_s`, and `dwave-qpu` takes
-`QpuParams` for `num_reads`, `chain_strength`, and `annealing_time_us`.
+`dwave-sqa` takes `SimulatedQuantumAnnealingParams` for `num_reads`,
+`num_sweeps`, `beta_range`, and `seed`. `dwave-exact` takes
+`ExactParams::with_max_variables` (default 20), `dwave-hybrid` takes
+`HybridParams::with_time_limit_s`, and `dwave-qpu` takes `QpuParams` for
+`num_reads`, `chain_strength`, and `annealing_time_us`.
 
 ## CLI
 
@@ -218,6 +235,8 @@ preserved as the cause.
   logistics example, `dwave-sa` and the classical path reach the same objective.
   That is the honest current state, and the ShadowCompare machinery exists
   precisely so the claim can be re-tested rather than assumed.
+- `dwave-sqa` emulates quantum annealing dynamics but runs on a classical CPU.
+  Treat it as quantum-inspired, never as a QPU result.
 
 ## Testing
 

@@ -45,7 +45,13 @@ fn every_dwave_backend_is_selectable_by_name() {
     let registry = solver_registry();
     let names = registry.names();
 
-    for expected in ["dwave-sa", "dwave-exact", "dwave-hybrid", "dwave-qpu"] {
+    for expected in [
+        "dwave-sa",
+        "dwave-sqa",
+        "dwave-exact",
+        "dwave-hybrid",
+        "dwave-qpu",
+    ] {
         assert!(
             names.contains(&expected.to_string()),
             "{expected} must be selectable, available: {names:?}"
@@ -55,6 +61,10 @@ fn every_dwave_backend_is_selectable_by_name() {
     assert_eq!(
         registry.require("dwave-sa").unwrap().kind(),
         SolverKind::Classical
+    );
+    assert_eq!(
+        registry.require("dwave-sqa").unwrap().kind(),
+        SolverKind::QuantumInspired
     );
     assert_eq!(
         registry.require("dwave-hybrid").unwrap().kind(),
