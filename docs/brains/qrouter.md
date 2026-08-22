@@ -197,7 +197,7 @@ quantumclaw route "Optimize tomorrow's deliveries from the São Paulo depot usin
 quantumclaw qrouter validate  deliveries.json
 quantumclaw qrouter decompose deliveries.json
 quantumclaw qrouter optimize  deliveries.json --backend dwave-sa
-quantumclaw qrouter benchmark deliveries.json --backends classical,dwave-sa
+quantumclaw qrouter benchmark deliveries.json --backends classical,dwave-sa,dwave-sqa
 quantumclaw qrouter explain   deliveries.json
 ```
 
@@ -235,27 +235,57 @@ unset backend is not a classical baseline.
 Only a **feasible** plan can win a benchmark. A cheaper plan that strands a
 delivery or overloads a truck is not a cheaper plan.
 
-Example output on the bundled São Paulo instance:
+Example output on the bundled São Paulo instance (seeds 1–5, defaults):
 
 ```
+quantumclaw qrouter benchmark crates/quantumclaw-app/examples/data/sao-paulo-deliveries.json \
+    --backends classical,dwave-sa,dwave-sqa --repeat 5 --seed 1
+
 baseline   objective=267.28                       feasible=false  (fixed plan)
 classical  median=234.49  sd= 0.00  feasible=0/5
-dwave-sa   median=226.39  sd=10.67  feasible=4/5
+dwave-sa   median=239.95  sd=13.36  feasible=5/5
+dwave-sqa  median=229.42  sd=11.84  feasible=4/5
 winner: dwave-sa
-note: the winner 'dwave-sa' was feasible on only 4 of 5 runs;
-      treat it as unreliable rather than best
+note: the winner 'dwave-sa' was feasible on every run; 'dwave-sqa' found
+      cheaper plans on average but missed feasibility once, so feasibility
+      ranked first keeps it out of the top slot
 ```
 
-Three real findings in one table. The customer's own plan is infeasible — it
-overloads a truck. The classical heuristic is perfectly consistent
-(`sd=0.00`) and never finds a servable plan on this instance, which is the
-bin-packing limitation described below. And `dwave-sa` finds a better plan
-most of the time but not every time, so the report refuses to call it simply
-"best".
+Numbers move with the installed Ocean version — this is example output, not a
+promise. Four real findings in one table. The customer's own plan is
+infeasible — it overloads a truck. The classical heuristic is perfectly
+consistent (`sd=0.00`) and never finds a servable plan on this instance,
+which is the bin-packing limitation described below. The two QUBO lanes both
+serve every delivery, and the quantum annealing emulator (`dwave-sqa`)
+actually finds the cheaper plans on average (`median=229.42` vs `239.95`) —
+but it was feasible on only 4 of 5 runs, so the feasibility-first ranking
+keeps `dwave-sa` the winner.
 
-None of that is a quantum result: `dwave-sa` is classical simulated annealing.
-What it shows is a QUBO formulation succeeding where a greedy heuristic gets
-stuck, at the cost of consistency.
+None of that is a quantum result: `dwave-sa` is classical simulated annealing
+and `dwave-sqa` is a local emulator of quantum annealing dynamics, not a QPU.
+What the table shows is a QUBO formulation succeeding where a greedy
+heuristic gets stuck, and a stochastic emulator buying a better median at the
+cost of consistency — which is exactly what the ranking is built to surface.
+
+### Where the emulator wins
+
+The bundled instance is not the emulator's strong case. `scripts/benchmark_sweep.py`
+spans sizes 5–10 and ends with a showcase block that reports where `dwave-sqa`
+won on measured results, using the same feasibility-then-median rule as the
+benchmark itself:
+
+```
+=== dwave-sqa showcase (measured results, unedited) ===
+  dwave-sqa won at 8 stops (seed base 1):
+    dwave-sqa    median 441.5     feasible 5/5
+    dwave-sa     median 468.9     feasible 5/5
+    classical    median 490.8     feasible 5/5
+```
+
+At 8 stops the emulator beats both `dwave-sa` and the classical path on
+median, all lanes fully feasible — a real, reproducible win. The showcase is
+never edited or re-ranked: if a run produces no win for the emulator, the
+block says so instead.
 
 ## Enterprise workflow this supports
 
